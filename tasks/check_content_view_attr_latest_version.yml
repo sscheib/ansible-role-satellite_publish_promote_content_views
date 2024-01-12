@@ -1,0 +1,48 @@
+---
+- name: >-
+    check_content_view_attr_latest_version | Block: Handle Content Views/Composite Content Views which have no
+    latest_version defined
+  block:
+
+    - name: >-
+        check_content_view_attr_latest_version | Ensure that all Content Views/Composite Content Views have the
+        attribute 'latest_version' defined
+      ansible.builtin.assert:
+        that:
+          # 'latest_version' is defined for all elements
+          # even if a (Composite) Content View hasn't been published this attribute should exist
+          - >-
+            __t_filtered_content_views |
+            selectattr('latest_version', 'undefined') |
+            length == 0
+
+        success_msg: 'All Content Views/Composite Content Views have the attribute latest_version defined'
+        fail_msg: >-
+          At least one Content View/Composite Content View does not have the attribute latest_version defined
+        quiet: '{{ _sat_quiet_assert }}'
+      register: '__t_has_latest_version_defined'
+
+  always:
+
+    - name: 'check_content_view_attr_latest_version | Block: Handle error case'
+      when:
+        - '__t_has_latest_version_defined.failed is defined'
+        - '__t_has_latest_version_defined.failed'
+      block:
+
+        - name: >-
+            check_content_view_attr_latest_version | List all Content Views/Composite Content Views
+            without attribute latest_version
+          ansible.builtin.debug:
+            var: >-
+              __t_filtered_content_views |
+              selectattr('latest_version', 'undefined') |
+              map(attribute='name')
+
+        - name: 'check_content_view_attr_latest_version | Fail with meaningful error message'
+          ansible.builtin.fail:
+            msg: >-
+              Above Content Views/Composite Contents Views have not defined the 'latest_version' attribute.
+              This attribute should *always* be defined, even when the Content View/Composite Content View has not
+              been published yet.
+...

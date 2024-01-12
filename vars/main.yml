@@ -1,0 +1,233 @@
+---
+#
+# mandatory variables
+#
+
+# these variables need to be either specified directly or be specified by
+# an environment variable
+#
+# possible environment variables:
+# - satellite_username: SATELLITE_USERNAME, SATELLITE_USER
+# - satellite_password: SATELLITE_PASSWORD
+# - satellite_server_url: SATELLITE_SERVER_URL, SATELLITE_SERVER, SATELLITE_URL
+
+# username to authenticate with against the Satellite API
+_satellite_username: '{{ satellite_username | default(None) }}'
+
+# password of the user to authenticate with against the Satellite API
+_satellite_password: '{{ satellite_password | default(None) }}'
+
+# URL to the Satellite API (including http/s://)
+_satellite_server_url: '{{ satellite_server_url | default(None) }}'
+
+# name of the Satellite Organization to perform actions within
+_satellite_organization: '{{ satellite_organization | default(None) }}'
+
+# Content Views and Composite Content Views to publish and optionally promote
+_satellite_content_views: '{{ satellite_content_views | mandatory }}'
+
+#
+# optional variables
+#
+
+# whether to validate certificates when connecting to the Satellite API
+# this can also be specified via environment variable SATELLITE_VALIDATE_CERTS
+_satellite_validate_certs: '{{ satellite_validate_certs | default(None) }}'
+
+# time in seconds each async task runs until it times out
+_sat_async_max_time: '{{ sat_async_max_time | default(_def_sat_async_max_time) }}'
+
+# poll time of each async task. Set to 0 for concurrent publish/promote actions
+_sat_async_poll_time: '{{ sat_async_poll_time | default(_def_sat_async_poll_time) }}'
+
+# how often an async task should be checked until it is determined failed
+_sat_async_retries: '{{ sat_async_retries | default(_def_sat_async_retries) }}'
+
+# delay between each check whether an async task finished
+_sat_async_check_delay: '{{ sat_async_check_delay | default(_def_sat_async_check_delay) }}'
+
+# whether to quiet assert statements
+_sat_quiet_assert: '{{ sat_quiet_assert | default(_def_sat_quiet_assert) }}'
+
+# description of the Content View version. This is not the Description of the Content View itself.
+# if unset, it will have the default of 'Patch day YYYY-MM-DD'
+_sat_content_view_version_description: '{{ sat_content_view_version_description | default(None) }}'
+
+# description of the Composite Content View version. This is not the Description of the
+# Composite Content View itself.
+# if unset, it will have the default of 'Patch day YYYY-MM-DD'
+_sat_composite_content_view_version_description: >-
+  {{
+    sat_composite_content_view_version_description | default(None)
+  }}
+
+# whether to only promote Content Views - no publish will happen.
+_sat_only_promote_content_views: '{{ sat_only_promote_content_views | default(None) }}'
+
+# whether to only promote Composite Content Views - no publish will happen.
+_sat_only_promote_composite_content_views: '{{ sat_only_promote_composite_content_views | default(None) }}'
+
+# Below variables limit the Lifecycle Environments to which a promote *can* happen.
+# Ultimately, the Content View/Composite Content View definition sets the Lifecycle Environments which
+# it should be promoted to.
+# These variables simply limit which of the defined Lifecycle Environments (in the Content View/Composite
+# Content View) the promotion will happen into.
+
+# Lifecycle Environment limit for Content Views
+_sat_content_views_allowed_lifecycle_environments: >-
+  {{
+    sat_content_views_allowed_lifecycle_environments | default([])
+  }}
+
+# Lifecycle Environment limit for Composite Content Views
+_sat_composite_content_views_allowed_lifecycle_environments: >-
+  {{
+    sat_composite_content_views_allowed_lifecycle_environments | default([])
+  }}
+
+# Content Views to exclude from any activity
+_sat_excluded_content_views: '{{ sat_excluded_content_views | default([]) }}'
+
+# Composite Content Views to exclude from any activity
+_sat_excluded_composite_content_views: '{{ sat_excluded_composite_content_views | default([]) }}'
+
+# Repositories to exclude from being evaluated (assert) or being taking into consideration when
+# determining if a (Composite) Content View needs to be published
+# note: only used when _sat_publish_based_on_repository is enabled
+_sat_excluded_repositories: '{{ sat_excluded_repositories | default([]) }}'
+
+# whether to skip the on-the-fly conversion of 'legacy' Content View/Composite Content View definitions
+#
+# it is recommended to only turn this off when you are 100% sure that you already use the 'correct'
+# definition.
+# If your definition is not compatible and you turn this check the conversion off there might be unforseen
+# side-effects and the role will fail
+_sat_skip_legacy_conversion: '{{ sat_skip_legacy_conversion | default(_def_sat_skip_legacy_conversion) }}'
+
+# whether to turn off another 'safeguard' before the actual on-the-fly conversion of Content View/Composite
+# Content View definitions which checks whether *all* elements of the definition can either be converted
+# or already follow the required definition format
+#
+# it is recommended to only turn this off once you ran the role at least once to ensure that your
+# definition can actually be converted. If your definition is not compatible and you turn this check of
+# there might be unforseen side-effects and the role will fail
+_sat_skip_legacy_assert: '{{ sat_skip_legacy_assert | default(_def_sat_skip_legacy_assert) }}'
+
+# whether to skip the assert statements which check all variables if they are properly defined
+# depending on the size of your Content View/Composite Content View definition, this will take
+# a considerable amount of time each time you run the role. You might want to turn it off, once you
+# verified that your definition of all the variables is correct.
+_sat_skip_assert: '{{ sat_skip_assert | default(_def_sat_skip_assert) }}'
+
+# whether to publish based on repository synchronization date
+#
+# when turned on, a publish will only happen if *any* repository contained in a Content View/Composite Content View
+# has a later synchronization date than the last publish of the Content View/Composite Content View
+#
+# this has a larger performance impact, as *all* repositories and *all* Content Views/Composite Content Views are
+# retrieved and evaluated against each other.
+_sat_publish_based_on_repository: '{{ sat_publish_based_on_repository | default(None) }}'
+
+# whether to perform a component based publishing.
+# This means to only publish Composite Content Views if there are components (Content Views) which have a newer
+# version available than currently included in the latest version of the Composite Content View's version
+_sat_publish_based_on_component: '{{ sat_publish_based_on_component | default(None) }}'
+
+# whether to check if Repositories have been synchronized in the past.
+# An unsynchronized Repository means it does not have any content and it doesn't (usually) make sense to include
+# it into any Content View/Composite Content View
+_sat_check_unsynchronized_repositories: >-
+  {{
+    sat_check_unsynchronized_repositories | default(_def_sat_check_unsynchronized_repositories)
+  }}
+
+# whether to check if Repositories are not currently synchronizing
+# it will only be checked for Repositories which are included in any Content View/Composite Content View which
+# should be published. Repositories which are not part of any to be published Content View/Composite Content View
+# are not taken into consideration
+_sat_check_synchronizing_repositories: >-
+  {{
+    sat_check_synchronizing_repositories | default(_def_sat_check_synchronizing_repositories)
+  }}
+
+# whether to wait for running Repository synchronizations to finish
+# it will only wait for Repositories which are included in any Content View/Composite Content View which should
+# be published. Repositories which are not part of any to be published Content View/Composite Content View
+# are not taken into consideration
+#
+# setting this to true makes the most sense when also sat_check_synchronizing_repositories is set to true
+_sat_wait_for_repository_synchronization: >-
+  {{
+    sat_wait_for_repository_synchronization | default(_def_sat_wait_for_repository_synchronization)
+  }}
+
+# whether to check if Repositories successfully finished synchronizing
+# it will only be checked for Repositories which are included in any Content View/Composite Content View which
+# should be published. Repositories which are not part of any to be published Content View/Composite Content View
+# are not taken into consideration
+_sat_check_successful_repository_synchronization: >-
+  {{
+    sat_check_successful_repository_synchronization | default(_def_sat_check_successful_repository_synchronization)
+  }}
+
+# which Content View kinds to process
+# can either be:
+# -> 'content_view' for Content Views
+# -> 'composite_content_view' for Composite Content Views
+# -> 'both' to process both Content Views and Composite Content Views
+_sat_content_view_kinds: '{{ sat_content_view_kinds | default(_def_sat_content_view_kinds) }}'
+
+# whether to synchronize Repositories included in any Content View/Composite Content View prior to
+# publishing a new version
+# this will *only* synchronize Repositories which are *included* in any Content View/Composite Content View
+_sat_synchronize_repositories: '{{ sat_synchronize_repositories | default(_def_sat_synchronize_repositories) }}'
+
+# format in which the timestamps are represented in the Satellite API.
+# Usually, this doesn't need to be touched - but just in case, it's here
+# Be sure you know what you are doing before touching this variable. It is only validated whether it is a string.
+_sat_api_timestamp_format: '{{ sat_api_timestamp_format | default(_def_sat_api_timestamp_format) }}'
+
+# whether to check if all Content Views/Composite Content Views defined
+# in satellite_content_views are known to Satellite
+_sat_check_content_views_known: '{{ sat_check_content_views_known | default(_def_sat_check_content_views_known) }}'
+
+# whether to show a small summary at the end of the role, which lists all changed (Composite) Content Views and
+# Repositories (if any)
+_sat_show_summary: '{{ sat_show_summary | default(_def_sat_show_summary) }}'
+
+#
+# below variables are only used when this role is run with the tag 'convert'
+#
+
+# the file in which the converted YAML definition will be written to
+_sat_convert_yaml_file: '{{ sat_convert_yaml_file | default(None) }}'
+
+# what indentation (number of spaces) the converted YAML should have
+_sat_convert_yaml_indent: '{{ sat_convert_yaml_indent | default(_def_sat_convert_yaml_indent) }}'
+
+# whether to lexicographically sort keys while exporting the YAML
+# this will invalidate _sat_convert_yaml_top_key, as the keys will be in lexicographical order
+_sat_convert_yaml_sort_keys: '{{ sat_convert_yaml_sort_keys | default(_def_sat_convert_yaml_sort_keys) }}'
+
+# whether to add an explicit YAML beginning tag (---) to the converted file
+_sat_convert_yaml_explicit_start: >-
+  {{
+    sat_convert_yaml_explicit_start | default(_def_sat_convert_yaml_explicit_start)
+  }}
+
+# whether to add an explicit YAML ending tag (...) to the converted file
+_sat_convert_yaml_explicit_end: '{{ sat_convert_yaml_explicit_end | default(_def_sat_convert_yaml_explicit_end) }}'
+
+# whether to use the custom YAML filter packaged with this role
+#
+# the filter indents lists by two spaces and optionally puts a specific key and value to the top of a
+# dictionary representing a Content View/Composite Content View
+_sat_convert_yaml_use_custom_yaml_filter: >-
+  {{
+    sat_convert_yaml_use_custom_yaml_filter | default(_def_sat_convert_yaml_use_custom_yaml_filter)
+  }}
+
+# whether to put a specific key and value to the top of a dictionary representing a Content View/Composite Content View
+# this key needs to exists - otherwise the custom filter will error out!
+_sat_convert_yaml_top_key: '{{ sat_convert_yaml_top_key | default(_def_sat_convert_yaml_top_key) }}'
+...

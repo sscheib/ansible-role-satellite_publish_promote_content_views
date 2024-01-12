@@ -1,0 +1,161 @@
+---
+- name: 'check_repo_sync | Set fact which checks whether the tasks where included recursively for Content Views'
+  ansible.builtin.set_fact:
+    __t_is_content_view_recurse: >-
+      {{
+        false
+        if __t_is_content_view_recurse is not defined
+        else
+        true
+      }}
+  when:
+    - '__t_is_composite is defined'
+    - 'not __t_is_composite'
+
+- name: >-
+    check_repo_sync | Set fact which checks whether the tasks where included recursively for Composite Content Views
+  ansible.builtin.set_fact:
+    __t_is_composite_content_view_recurse: >-
+      {{
+        false
+        if __t_is_composite_content_view_recurse is not defined
+        else
+        true
+      }}
+  when:
+    - '__t_is_composite is defined'
+    - '__t_is_composite'
+
+- name: 'check_repo_sync | Block: Handle currently synchronizing Repositories'
+  block:
+
+    - name: >-
+        check_repo_sync | Ensure that all Repositories included in the (Composite) Content Views are not
+        currently synchronizing
+      ansible.builtin.assert:
+        that:
+          - >-
+            __t_filtered_repositories |
+            selectattr('last_sync.state', '!=', 'stopped') |
+            length
+            == 0
+
+        success_msg: 'No Repository included in (Composite) Content Views is currently synchronizing'
+        fail_msg: 'Found at least one synchronizing Repository included in at least one (Composite) Content View'
+        quiet: '{{ _sat_quiet_assert }}'
+      register: '__t_has_synchronizing_repositories'
+
+  rescue:
+
+    - name: 'check_repo_sync | Include tasks to wait for Repository synchronization to finish'
+      ansible.builtin.include_tasks:
+        file: 'wait_for_repo_sync.yml'
+      vars:
+        __t_repo_sync_finished: false
+      when:
+        - '_sat_wait_for_repository_synchronization is defined'
+        - '_sat_wait_for_repository_synchronization'
+        - >-
+          (
+            __t_is_composite is defined
+            and not __t_is_composite
+            and not __t_is_content_view_recurse
+          )
+          or
+          (
+            __t_is_composite is defined
+            and __t_is_composite
+            and not __t_is_composite_content_view_recurse
+          )
+
+  always:
+
+    - name: 'check_repo_sync | Handle error case'
+      when:
+        - '__t_has_synchronizing_repositories.failed is defined'
+        - '__t_has_synchronizing_repositories.failed'
+        - >-
+          _sat_wait_for_repository_synchronization is not defined
+          or not _sat_wait_for_repository_synchronization
+      block:
+
+        - name: 'check_repo_sync | List all currently synchronizing Repositories'
+          ansible.builtin.debug:
+            var: >-
+              __t_filtered_repositories |
+              selectattr('last_sync.state', '!=', 'stopped') |
+              map(attribute='name')
+
+        # we need this as a rescue is defined, which will prevent the block from failing
+        - name: 'check_repo_sync | Fail if Repositories have not been waited for being synchronized'
+          ansible.builtin.fail:
+            msg: >-
+              One or more Repositories included in the Content Views/Composite Contents views are currently
+              synchronizing and it was not asked to wait for them to finish
+
+    - name: 'check_repo_sync | Block: Handle including recursively Repository retrieval and validation'
+      when:
+        - '_sat_wait_for_repository_synchronization is defined'
+        - '_sat_wait_for_repository_synchronization'
+        - '__t_repo_sync_finished is defined'
+        - '__t_repo_sync_finished'
+        - >-
+          (
+            __t_is_composite is defined
+            and not __t_is_composite
+            and not __t_is_content_view_recurse
+          )
+          or
+          (
+            __t_is_composite is defined
+            and __t_is_composite
+            and not __t_is_composite_content_view_recurse
+          )
+      block:
+
+        # with the below includes with selective include checks which are relevant after a
+        # synchronization has finished. if we'd include 'repository_validation.yml' *all*
+        # checks would run once more, including those that have passed (such as checking for
+        # the name attribute), which are *not* affected by waiting for a Repository synchronization
+        # to finish
+
+        - name: >-
+            check_repo_sync | Include tasks to retrieve and validate the Repositories after
+            waiting for the synchronization
+          ansible.builtin.include_tasks:
+            file: 'repository_retrieval.yml'
+
+        - name: 'check_repo_sync | Include tasks to filter the Repositories after waiting for the synchronization'
+          ansible.builtin.include_tasks:
+            file: 'repository_filtering.yml'
+
+        - name: >-
+            check_repo_sync | Include tasks to check whether the attribute last_sync is defined for all Repositories
+          ansible.builtin.include_tasks:
+            file: 'check_repo_attr_last_sync.yml'
+
+        - name: >
+            check_repo_sync | Include tasks to validate whether included Repositories define the
+            attribute 'last_sync.ended_at'
+          ansible.builtin.include_tasks:
+            file: 'check_repo_attr_last_sync_ended_at.yml'
+
+        - name: >
+            check_repo_sync | Include tasks to validate whether included Repositories have a correct
+            timestamp set for the attribute 'last_sync.ended_at'
+          ansible.builtin.include_tasks:
+            file: 'check_repo_timestamp_attr_last_sync_endet_at.yml'
+
+        - name: 'check_repo_sync | Include tasks to check if the last Repository synchronization was successful'
+          ansible.builtin.include_tasks:
+            file: 'check_repo_last_sync_successful.yml'
+          when:
+            - '_sat_check_successful_repository_synchronization is defined'
+            - '_sat_check_successful_repository_synchronization'
+
+        - name: >-
+            check_repo_sync | Include tasks to check Repository state after waiting for the Repository
+            synchronization to finish
+          ansible.builtin.include_tasks:
+            file: 'check_repo_sync.yml'
+...

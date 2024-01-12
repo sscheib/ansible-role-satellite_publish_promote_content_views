@@ -1,0 +1,63 @@
+---
+# using _sat_quiet_assert, when possible, otherwise don't quiet it
+# _sat_quiet_assert will be checked later
+
+- name: 'assert_convert | Ensure integer variables are defined properly'
+  ansible.builtin.assert:
+    that:
+      - "lookup('ansible.builtin.vars', __t_var) is defined"
+      - "lookup('ansible.builtin.vars', __t_var) | int | string == lookup('ansible.builtin.vars', __t_var) | string"
+      - "lookup('ansible.builtin.vars', __t_var) | int is number"
+      - "lookup('ansible.builtin.vars', __t_var) | int is integer"
+      - "lookup('ansible.builtin.vars', __t_var) | int >= 0"
+    success_msg: "Variable '{{ __t_var }}' defined properly - value: '{{ lookup('ansible.builtin.vars', __t_var) }}'"
+    fail_msg: "Variable '{{ __t_var }}' failed to validate"
+    quiet: '{{ _sat_quiet_assert | default(false) }}'
+  loop:
+    - '_sat_convert_yaml_indent'
+  loop_control:
+    loop_var: '__t_var'
+
+- name: 'assert_convert | Ensure boolean variables are defined properly'
+  ansible.builtin.assert:
+    that:
+      - "lookup('ansible.builtin.vars', __t_var) is defined"
+      - "lookup('ansible.builtin.vars', __t_var) | bool | string == lookup('ansible.builtin.vars', __t_var) | string"
+      - "lookup('ansible.builtin.vars', __t_var) is boolean"
+    success_msg: "Variable '{{ __t_var }}' defined properly - value: '{{ lookup('ansible.builtin.vars', __t_var) }}'"
+    fail_msg: "Variable '{{ __t_var }}' failed to validate"
+    quiet: '{{ _sat_quiet_assert | default(false) }}'
+  loop:
+    - '_sat_convert_yaml_sort_keys'
+    - '_sat_convert_yaml_explicit_start'
+    - '_sat_convert_yaml_explicit_end'
+    - '_sat_convert_yaml_use_custom_yaml_filter'
+  loop_control:
+    loop_var: '__t_var'
+
+- name: 'assert_convert | Ensure _sat_convert_yaml_top_key is defined properly - if defined'
+  ansible.builtin.assert:
+    that:
+      - >-
+        (_sat_convert_yaml_top_key is defined) |
+        ansible.builtin.ternary(
+          _sat_convert_yaml_top_key != '', true
+        )
+
+      - >-
+        (_sat_convert_yaml_top_key is defined) |
+        ansible.builtin.ternary(
+          _sat_convert_yaml_top_key != None, true
+        )
+    success_msg: >-
+      {{
+        'Variable _sat_convert_yaml_top_key defined properly - value: ' ~
+        lookup('ansible.builtin.vars', '_sat_convert_yaml_top_key')
+        if lookup('ansible.builtin.vars', '_sat_convert_yaml_top_key', default='') | length > 0
+        else
+        'Variable _sat_convert_yaml_top_key is not defined'
+      }}
+      "Variable _sat_convert_yaml_top_key defined properly - value: '{{ _sat_convert_yaml_top_key }}'"
+    fail_msg: "Variable '_sat_convert_yaml_indent' failed to validate"
+    quiet: '{{ _sat_quiet_assert | default(false) }}'
+...

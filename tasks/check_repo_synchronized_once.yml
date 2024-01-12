@@ -1,0 +1,40 @@
+---
+- name: 'check_repo_synchronized_once | Block: Handle unsynchronized Repositories'
+  block:
+
+    - name: >-
+        check_repo_synchronized_once | Ensure that all Repositories included in the (Composite) Content
+        Views have been synchronized at least one
+      ansible.builtin.assert:
+        that:
+          - >-
+            __t_filtered_repositories |
+            selectattr('last_sync', '==', None) |
+            length == 0
+
+        success_msg: 'All Repositories included in the (Composite) Content Views have been synchronized in the past'
+        fail_msg: 'Found at least one unsynchronized Repository included in at least one (Composite) Content View'
+        quiet: '{{ _sat_quiet_assert }}'
+      register: '__t_has_unsynchronized_repositories'
+
+  always:
+
+    - name: 'check_repo_synchronized_once | Block: Handle error case'
+      when:
+        - '__t_has_unsuccessul_repository_synchronizations.failed is defined'
+        - '__t_has_unsuccessul_repository_synchronizations.failed'
+      block:
+
+        - name: 'check_repo_synchronized_once | List all unsynchronized Repositories'
+          ansible.builtin.debug:
+            var: >-
+              __t_filtered_repositories |
+              selectattr('last_sync', '==', None) |
+              map(attribute='name')
+
+        - name: 'check_repo_synchronized_once | Fail with meaningful error message'
+          ansible.builtin.fail:
+            msg: >-
+              Above Repositories included in one or more Content Views/Composite Content Views
+              have not been synchronized once
+...

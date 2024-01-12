@@ -1,0 +1,22 @@
+---
+- name: 'summary | Show changed Repositories'
+  ansible.builtin.debug:
+    var: '__t_changed_repositories'
+  when:
+    - '__t_changed_repositories is defined'
+    - '__t_changed_repositories | length > 0'
+
+- name: 'summary | Show changed Content Views'
+  ansible.builtin.debug:
+    var: '__t_changed_content_views'
+  when:
+    - '__t_changed_content_views is defined'
+    - '__t_changed_content_views | length > 0'
+
+- name: 'summary | Show changed Composite Content Views'
+  ansible.builtin.debug:
+    var: '__t_changed_composite_content_views'
+  when:
+    - '__t_changed_composite_content_views is defined'
+    - '__t_changed_composite_content_views | length > 0'
+...

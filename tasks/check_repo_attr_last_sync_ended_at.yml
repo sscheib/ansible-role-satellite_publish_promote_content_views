@@ -1,0 +1,44 @@
+---
+- name: 'check_repo_attr_last_sync_ended_at | Block: Handle checking if all Repositories have a correct timestamp set'
+  block:
+
+    - name: >-
+        check_repo_attr_last_sync_ended_at | Ensure that all Repositories included in the (Composite) Content Views
+        have the Repository synchronization end date attribute defined
+      ansible.builtin.assert:
+        that:
+          - >-
+            __t_filtered_repositories |
+            selectattr('last_sync.ended_at', 'undefined') |
+            length == 0
+
+        success_msg: 'All Repositories have defined the Repository synchronization end_date attribute defined'
+        fail_msg: >-
+          Found at least one Repository included in at least one (Composite) Content View that does not
+          have defined the Repository synchronization end date attribute
+        quiet: '{{ _sat_quiet_assert }}'
+      register: '__t_has_no_end_date_defined'
+
+  always:
+
+    - name: 'check_repo_attr_last_sync_ended_at | Block: Handle error case'
+      when:
+        - '__t_has_no_end_date_defined.failed is defined'
+        - '__t_has_no_end_date_defined.failed'
+      block:
+
+        - name: >-
+            check_repo_attr_last_sync_ended_at | List all Repositories that do not have defined the Repository
+            synchronization state attribute
+          ansible.builtin.debug:
+            var: >-
+              __t_filtered_repositories |
+              selectattr('last_sync.ended_at', 'undefined') |
+              map(attribute='name')
+
+        - name: 'check_repo_attr_last_sync_ended_at | Fail with meaningful error message'
+          ansible.builtin.fail:
+            msg: >-
+              The above Repositories have not specified the attribute 'last_sync.end_date' which should
+              *always* be defined - even for Repositories that have not been synchronized yet.
+...

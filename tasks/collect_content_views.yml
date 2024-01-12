@@ -1,0 +1,120 @@
+---
+- name: >-
+    collect_content_views | Collect Content Views/Composite Content Views which have an older publish time than any
+    contained repositories have been synchronized
+  ansible.builtin.set_fact:
+    # when Ansible is run with verbosity (ansible_verbosity > 0) we collect for easier debugging:
+    # - (Composite) Content View name
+    # - Repository name that was detected to have a newer synchonisation time
+    # - last publish time of the (Composite) Content View
+    # - last synchronization time of the Repository
+    #
+    # note: the publish/synchronization times are collected in human
+    #       readable format as well as as epoch (*_epoch)
+    #
+    # if Ansible is run without verbosity, we only collect the (Composite) Content View name
+    __t_content_views_publish_required: >-
+      {{
+        __t_content_views_publish_required | default([]) +
+        [
+          (
+            ansible_verbosity is defined
+            and ansible_verbosity > 0
+          ) | ansible.builtin.ternary(
+            {
+              'name': __t_item.0.name,
+              'repository': __t_item.1.name,
+              'last_publish':  __t_item.0.last_published | default(None),
+              'last_publish_epoch':
+                (
+                  __t_item.0.last_published |
+                  ansible.builtin.to_datetime(format=_sat_api_timestamp_format)
+                ).strftime('%s'),
+              'last_sync':
+                __t_filtered_repositories |
+                selectattr('name', '==', __t_item.1.name) |
+                map(attribute='last_sync') |
+                map(attribute='ended_at') |
+                first,
+              'last_sync_epoch':
+                (
+                  __t_filtered_repositories |
+                  selectattr('name', '==', __t_item.1.name) |
+                  map(attribute='last_sync') |
+                  map(attribute='ended_at') |
+                  first |
+                  ansible.builtin.to_datetime(format=_sat_api_timestamp_format)
+                ).strftime('%s')
+            },
+            {
+              'name': __t_item.0.name,
+            }
+          )
+        ]
+      }}
+  # There are basically two 'branches' in below expression.
+  #
+  # The first case is that the (Composite) Content View has never been published, which is indicated by
+  # the attribute 'last_published' which is None (null).
+  #
+  # In this case we check whether the current (Composite) Content View is not already present in
+  # __t_content_views_publish_required. When it's not present, we add it to __t_content_views_publish_required.
+  #
+  # The other case is when the (Composite) Content View has been published in the past ('last_published' != None)
+  # and the last Repository synchronization date is newer than the last publish date of the (Composite) Content View
+  #
+  # If any of the two cases matches, we'll add the content view to __t_content_views_publish_required
+  when: >-
+   (
+      (
+        __t_item.0.last_published == None
+      )
+      and
+      (
+        __t_item.0.name not in
+          __t_content_views_publish_required | default([]) |
+          map(attribute='name', default=[]) |
+          ansible.builtin.flatten
+      )
+    )
+    or
+    (
+      (
+        __t_item.0.last_published != None
+      )
+      and
+      (
+        __t_content_views_publish_required | default([]) |
+        selectattr('name', '==', __t_item.0.name) | default([]) |
+        length == 0
+      )
+      and
+      (
+        (
+          __t_filtered_repositories |
+          selectattr('name', '==', __t_item.1.name) |
+          map(attribute='last_sync') |
+          ansible.builtin.flatten |
+          map(attribute='ended_at') |
+          ansible.builtin.flatten |
+          first |
+          ansible.builtin.to_datetime(format=_sat_api_timestamp_format)
+        ).strftime('%s') | int
+        >
+        (
+          __t_item.0.last_published |
+          ansible.builtin.to_datetime(format=_sat_api_timestamp_format)
+        ).strftime('%s') | int
+      )
+    )
+
+  loop: "{{ __t_filtered_content_views | ansible.builtin.subelements('repositories') }}"
+  loop_control:
+    loop_var: '__t_item'
+    label: "{{ __t_item.0.name ~ ' -> ' ~ __t_item.1.name }}"
+
+- name: 'collect_content_views | Debug: __t_content_views_publish_required'
+  ansible.builtin.debug:
+    var: '__t_content_views_publish_required'
+    verbosity: 1
+...

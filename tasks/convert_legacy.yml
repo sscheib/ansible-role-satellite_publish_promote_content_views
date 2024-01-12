@@ -1,0 +1,141 @@
+---
+- name: 'convert_legacy | Ensure the legacy format can be converted'
+  ansible.builtin.assert:
+    that:
+      - >-
+        __t_content_view.name is defined
+        or
+        __t_content_view.content_view is defined
+        or
+        (
+          __t_content_view is string
+          and __t_content_view is sequence
+          and __t_content_view is iterable
+          and __t_content_view is not mapping
+        )
+    quiet: '{{ _sat_quiet_assert | default(false) }}'
+  when: >-
+    _sat_skip_legacy_assert is not defined
+    or _sat_skip_legacy_assert
+  loop: '{{ _satellite_content_views }}'
+  loop_control:
+    loop_var: '__t_content_view'
+    label: >-
+      {{
+        __t_content_view.name |
+        default(__t_content_view.content_view) |
+        default(__t_content_view)
+      }}
+
+- name: >-
+    convert_legacy | Create temporary new list with Content Views/Composite Content Views while
+    converting the legacy format
+  ansible.builtin.set_fact:
+    # Ideally this expression is never used, as it is absurd to use Ansible like this. It is also rather resource hungry
+    # due to the absurd amount of filters used in this expression.
+    #
+    # Let's get into what it does.
+    # Below monstrosity basically converts the "legacy" definition formats (yes, two!) of Content View/Composite Content
+    # View the roles theforeman.foreman.content_view_publish and redhat.satellite.content_view_publish keep for
+    # backwards compatibility into definitions into the format required for this role.
+    #
+    # The legacy formats are either:
+    # A list of strings:
+    #
+    # legacy_format_a:
+    #   - 'content_view1'
+    #   - 'content_view2'
+    #   - etc.
+    #
+    # The commonly used 'name' to identify an item, can be 'content_view':
+    # legacy_format_b:
+    #   - content_view: 'content_view1'
+    #   - content_view: 'content_view2'
+    #   - etc.
+    #
+    # What this expression on a highly level does is, to transform legacy_format_a and legacy_format_b to:
+    # - name: 'content_view1'
+    # - name: 'content_view2'
+    # - etc.
+    #
+    # In case of legacy_format_b the attribute 'content_view' is dropped (replaced by 'name') and all
+    # other attributes are kept. legacy_format_a does not have any attributes to keep, so that's easier :).
+    #
+    # Now, into the details what this expression does:
+    # - We iterate over _satellite_content_views
+    # - First, we define __t_satellite_content_views, in the first iteration empty ([]) and append a new list
+    #   item to it
+    # - If neither __t_content_view.name nor __t_content_view.content_view is defined, we assume we are dealing
+    #   with legacy_format_a and therefore simply create a dictionary which uses the attribute name with the
+    #   value of the item (__t_content_view) we are currently processing
+    # - Next, we'll check if the current item has 'content_view' as attribute assigned. If so, we'll first
+    #   remove the attribute 'content_view' by transforming the dictionary into items (dict2items) while rejecting
+    #   the key 'content_view' and finally re-assamble the dictionary (items2dict) while combining it with a new
+    #   attribute 'name', which is the value of 'content_view'
+    # - Should neither of the above evaluate, we know that we deal with the 'correct' format (attribute 'name' is set)
+    #   as we ensure that in the previous assert statement. Therefore we just pass on the current item to be
+    #   appended to the list of dictionaries we are creating
+    #
+    # Note:
+    # The 'default()' statements are *required*, as otherwise the expression breaks, because Ansible evaluates the
+    # variables *before* evaluating the expression. This means, that *every item* would need to have the attributes
+    # 'content_view' *and* 'name' set, which is obviously not the case. Let alone for legacy_format_a which does
+    # not have any attributes defined.
+    # The default statements prevent the expression from failing, but are irrelevant while the expression is evaluated.
+    # This is because the expression is written in a way to filter out each case so a default is never required.
+    __t_satellite_content_views: >-
+      {{
+        __t_satellite_content_views | default([]) +
+          [
+            (
+              __t_content_view.name is not defined
+              and __t_content_view.content_view is not defined
+            ) | ansible.builtin.ternary(
+              {
+                'name': __t_content_view
+              },
+              (
+                _satellite_content_views |
+                rejectattr('content_view', 'undefined') |
+                selectattr('content_view', 'equalto', __t_content_view.content_view | default([])) |
+                length > 0
+              ) | ansible.builtin.ternary(
+                _satellite_content_views |
+                rejectattr('content_view', 'undefined') |
+                selectattr('content_view', 'equalto', __t_content_view.content_view | default([])) |
+                first | default({}) |
+                ansible.builtin.dict2items | default({}) |
+                rejectattr('key', 'equalto', 'content_view') |
+                ansible.builtin.items2dict |
+                combine(
+                  {
+                    'name': __t_content_view.content_view | default('')
+                  }
+                ),
+                __t_content_view
+              )
+            )
+          ]
+      }}
+  loop: '{{ _satellite_content_views }}'
+  loop_control:
+    loop_var: '__t_content_view'
+    label: >-
+      {{
+        __t_content_view.name |
+        default(__t_content_view.content_view) |
+        default(__t_content_view)
+      }}
+
+- name: >-
+    convert_legacy | Overwrite old Content View/Composite Content view definition with the created temporary list
+  ansible.builtin.set_fact:
+    _satellite_content_views: '{{ __t_satellite_content_views }}'
+    # empty the temporary list to save resources
+    __t_satellite_content_views: []
+
+- name: 'convert_legacy | Debug: _satellite_content_views'
+  ansible.builtin.debug:
+    var: '_satellite_content_views'
+    verbosity: 1
+...

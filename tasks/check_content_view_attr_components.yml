@@ -1,0 +1,40 @@
+---
+- name: >-
+    check_content_view_attr_components | Block: Handle Composite Content Views without a components attribute
+  block:
+
+    - name: 'check_content_view_attr_components | Ensure Composite Content Views have the components attribute defined'
+      ansible.builtin.assert:
+        that:
+          # 'components' is defined for all elements
+          - >-
+            __t_excluded_content_views |
+            selectattr('components', 'undefined') |
+            length == 0
+
+        success_msg: 'All Composite Content Views have a components attribute defined'
+        fail_msg: 'One or more Composite Content Views have no components attribute defined'
+        quiet: '{{ _sat_quiet_assert }}'
+      register: '__t_has_content_view_no_components'
+
+  always:
+
+    - name: 'check_content_view_attr_components | Block: Handle error case'
+      when:
+        - '__t_has_content_view_no_components.failed is defined'
+        - '__t_has_content_view_no_components.failed'
+      block:
+
+        - name: 'check_content_view_attr_components | List all Composite Content Views without attribute components'
+          ansible.builtin.debug:
+            var: >-
+              __t_excluded_content_views |
+              selectattr('components', 'undefined')
+
+        - name: 'check_content_view_attr_components | Fail with meaningful error message'
+          ansible.builtin.fail:
+            msg: >-
+              Above Composite Contents Views have not defined the 'components' attribute.
+              This attribute should *always* be defined. Seeing this error indicates that the
+              Satellite API response has changed and this role is no longer functional as it is.
+...

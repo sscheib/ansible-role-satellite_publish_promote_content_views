@@ -1,0 +1,228 @@
+---
+- name: 'prepare | Set fact: __t_search_string, __t_description, __t_allowed_lifecycle_environments'
+  ansible.builtin.set_fact:
+    # search string for redhat.satellite.resource_info
+    #
+    # NOTE: it is important to keep the inner quotes as double quotes ("),
+    # as otherwise Satellite will *not* find *any* Content Views
+    __t_search_string: >-
+      {{
+       'composite = true AND name != "Default Organization View"'
+        if __t_is_composite is defined
+        and __t_is_composite
+        else
+        'composite = false AND name != "Default Organization View"'
+      }}
+
+    # Content View/Composite Content View Version description
+    __t_description: >-
+      {{
+        __t_description
+        if __t_description is defined
+        and __t_description != None
+        else
+        'Patch day ' ~ ansible_date_time.date
+      }}
+
+    # allowed Lifecycle Environments
+    __t_allowed_lifecycle_environments: >-
+      {{
+        _sat_composite_content_views_allowed_lifecycle_environments | default([])
+        if __t_is_composite is defined
+        and __t_is_composite
+        else
+        _sat_content_views_allowed_lifecycle_environments | default([])
+      }}
+
+    # excluded (Composite) Content Views
+    __t_reject_content_views: >-
+      {{
+        _sat_excluded_composite_content_views | default([])
+        if __t_is_composite is defined
+        and __t_is_composite
+        else
+        _sat_excluded_content_views | default([])
+      }}
+
+# this is done to ensure that the included Content Views are not kept during
+# re-including the tasks in this file
+- name: 'prepare | Reset filtered Content Views/Composite Content Views'
+  ansible.builtin.set_fact:
+    __t_filtered_content_views: []
+
+- name: 'prepare | Set fact if Repository related actions are required'
+  ansible.builtin.set_fact:
+    __t_repository_action_required: true
+  when: >-
+    (
+      _sat_check_unsynchronized_repositories is defined
+      and _sat_check_unsynchronized_repositories
+    ) or (
+      _sat_check_synchronizing_repositories is defined
+      and _sat_check_synchronizing_repositories
+    ) or (
+      _sat_wait_for_repository_synchronization is defined
+      and _sat_wait_for_repository_synchronization
+    ) or (
+      _sat_check_successful_repository_synchronization is defined
+      and _sat_check_successful_repository_synchronization
+    ) or (
+      _sat_publish_based_on_repository is defined
+      and _sat_publish_based_on_repository
+    ) or (
+      _sat_synchronize_repositories is defined
+      and _sat_synchronize_repositories
+    )
+
+- name: 'prepare | Include tasks to retrieve all Content Views/Composite Content Views from the Satellite API'
+  ansible.builtin.include_tasks:
+    file: 'content_view_retrieval.yml'
+
+- name: 'prepare | Include tasks to check if all Content Views/Composite Content Views define the name attribute'
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_attr_name.yml'
+
+- name: 'prepare | Include tasks to exclude Content Views/Composite Content Views'
+  ansible.builtin.include_tasks:
+    file: 'content_view_exclusion.yml'
+
+- name: 'prepare | Include tasks to handle Content Views/Composite Content Repositories'
+  ansible.builtin.include_tasks:
+    file: 'content_view_repositories.yml'
+  # modifying the Content Views assigned Repositories makes only sense when:
+  # - there is at least one Content View left to work with
+  # - any Repository related activity is required
+  # - we are currently not working on Composite Content Views
+  # - promotion only was asked for
+  when:
+    - '__t_excluded_content_views | length > 0'
+    - '__t_repository_action_required is defined'
+    - '__t_repository_action_required'
+    - >-
+      __t_is_composite is not defined
+      or not __t_is_composite
+    - >-
+      __t_promote_only is not defined
+      or not __t_promote_only
+
+# __t_filtered_content_views is not populated when no Repository related activity is enabled
+# or when it was asked to promote only
+# to work with the same variable throughout, we'll simply assign __t_excluded_content_views
+- name: 'prepare | Set fact: Filtered Content Views if unset'
+  ansible.builtin.set_fact:
+    __t_filtered_content_views: '{{ __t_excluded_content_views }}'
+  when: >-
+    __t_filtered_content_views is not defined
+    or __t_filtered_content_views | length == 0
+
+- name: 'prepare | Debug: Filterered Content Views (names only)'
+  ansible.builtin.debug:
+    var: "__t_filtered_content_views | map(attribute='name')"
+    verbosity: 1
+
+- name: 'prepare | Debug: Filterered Content Views'
+  ansible.builtin.debug:
+    var: '__t_filtered_content_views'
+    verbosity: 2
+
+- name: 'prepare | Block: Handle retrieval and validation of Repositories'
+  # retrieving and validatating Repositories makes no sense when promotion only is asked
+  # for and any of the Repository actions/validations are enabled.
+  # and of course, actual Content Views need to be left over, otherwise it doesn't make any sense :)
+  # further, Repository based publishing is irrelevant for Composite Content Views. For that, there is
+  # Component based publishing
+  when:
+    - '__t_filtered_content_views | length > 0'
+    - '__t_repository_action_required is defined'
+    - '__t_repository_action_required'
+    - >-
+      __t_is_composite is not defined
+      or not __t_is_composite
+    - >-
+      __t_promote_only is not defined
+      or not __t_promote_only
+  block:
+
+    - name: 'prepare | Include tasks to retrieve Repositories'
+      ansible.builtin.include_tasks:
+        file: 'repository_retrieval.yml'
+
+    - name: 'prepare | Include tasks to filter Repositories'
+      ansible.builtin.include_tasks:
+        file: 'repository_filtering.yml'
+
+    - name: 'prepare | Block: Handle synchronizing Repositories'
+      when:
+        - '_sat_synchronize_repositories is defined'
+        - '_sat_synchronize_repositories'
+      block:
+
+        - name: 'prepare | Include tasks to synchronize Repositories'
+          ansible.builtin.include_tasks:
+            file: 'repository_synchronization.yml'
+
+        # after synchronizing we need to retrieve the updated Repositories again and
+        # apply filtering to them as well
+        - name: 'prepare | Include tasks to retrieve Repositories'
+          ansible.builtin.include_tasks:
+            file: 'repository_retrieval.yml'
+
+        - name: 'prepare | Include tasks to filter Repositories'
+          ansible.builtin.include_tasks:
+            file: 'repository_filtering.yml'
+
+    # doing this after excluding Repositories, as a user might exclude a problematic Repository on purpose
+    - name: 'prepare | Include tasks to validate the Satellite API response'
+      ansible.builtin.include_tasks:
+        file: 'check_repo_attr_last_sync.yml'
+
+    - name: 'prepare | Include tasks to validate the filtered Repositories'
+      ansible.builtin.include_tasks:
+        file: 'repository_validation.yml'
+
+- name: 'prepare | Block: Handle publish and optional promote for Content Views/Composite Content Views'
+  when:
+    - '__t_filtered_content_views | length > 0'
+    - >-
+      __t_promote_only is not defined
+      or not __t_promote_only
+  block:
+
+    - name: 'prepare | Block: Handle Component based publishing'
+      when:
+        - '_sat_publish_based_on_component is defined'
+        - '_sat_publish_based_on_component'
+        - '__t_is_composite is defined'
+        - '__t_is_composite'
+      block:
+
+        - name: 'prepare | Include tasks to perform Component based publishing for Composite Content Views'
+          ansible.builtin.include_tasks:
+            file: 'component_based_publishing.yml'
+
+    - name: >-
+        prepare | Set list of Content Views/Composite Content Views that require a publish when not asked for
+        Repository based publishing
+      ansible.builtin.set_fact:
+        __t_content_views_publish_required: '{{ __t_filtered_content_views }}'
+      when: >-
+        _sat_publish_based_on_repository is not defined
+        or not _sat_publish_based_on_repository
+
+    - name: 'prepare | Include tasks to publish and optionally promote Content Views/Composite Content Views'
+      ansible.builtin.include_tasks:
+        file: 'publish_promote.yml'
+      when:
+        - '__t_content_views_publish_required is defined'
+        - '__t_content_views_publish_required | length > 0'
+        - >-
+          _sat_publish_based_on_component is not defined
+          or not _sat_publish_based_on_component
+
+- name: 'prepare | Include tasks to promote Content Views/Composite Content Views'
+  ansible.builtin.include_tasks:
+    file: 'promote.yml'
+  when:
+    - '__t_promote_only is defined'
+    - '__t_promote_only'
+...

@@ -1,0 +1,82 @@
+---
+- name: >-
+    check_content_view_timestamp_attr_last_published | Block: Handle checking Content
+    Views/Composite Content Views for the 'last_published' state
+  block:
+
+    - name: >-
+        check_content_view_timestamp_attr_last_published | Ensure that Content Views/Composite Content Views
+        which have been published have a correct timestamp set for the last published time
+      ansible.builtin.assert:
+        that:
+          # 'last_published' is either None or should be a valid timestamp
+          - >-
+              (
+                __t_content_view.last_published == None
+              ) | ansible.builtin.ternary(
+                true,
+                __t_content_view.last_published | default('') |
+                ansible.builtin.to_datetime(format=_sat_api_timestamp_format) | default('')
+                != ''
+              )
+
+        success_msg: >-
+          All Content Views/Composite Content Views which have been published have the last published
+          time as correct timestamp defined
+        fail_msg: >-
+          At least one Content View/Composite Content View has been published and has an invalid timestamp
+          format set for the last published time
+        quiet: '{{ _sat_quiet_assert }}'
+      register: '__t_has_no_last_published'
+      loop: '{{ __t_excluded_content_views }}'
+      loop_control:
+        loop_var: '__t_content_view'
+        label: '{{ __t_content_view.name }}'
+      when:
+        - '__t_content_view.last_published is defined'
+        - '__t_content_view.last_published != None'
+
+  always:
+
+    - name: 'check_content_view_timestamp_attr_last_published | Block: Handle error case'
+      when:
+        - '__t_has_no_last_published.failed is defined'
+        - '__t_has_no_last_published.failed'
+      block:
+
+        # I couldn't figure out a better way of testing a timestamp with ansible.builtin.to_datetime
+        # as the filter does not provide a way to catch the error (with a default for instance) and
+        # therefore, we include tasks that try to convert each timestamp on its own and catch any
+        # failed items with 'ignore_errors: true'. Doing this in a loop would result in abortion of the
+        # loop once a failed item is encountered, which would possibly lead to the user running this
+        # role multiple times only to encounter the same error multiple times (but for different (Composite)
+        # Content Views, which is very much undesirable
+        - name: >-
+            check_content_view_timestamp_attr_last_published | Include tasks to check which timestamps can not be
+            converted to Ansible date/time objects
+          ansible.builtin.include_tasks:
+            file: 'test_timestamp.yml'
+          vars:
+            __t_attribute: 'last_published'
+          loop: '{{ __t_excluded_content_views }}'
+          loop_control:
+            loop_var: '__t_test_item'
+            label: '{{ __t_test_item.name }}'
+
+        - name: >-
+            check_content_view_timestamp_attr_last_published | List all published Content Views/Composite
+            Content Views which have no valid timestamp set for the 'last_published' attribute
+          ansible.builtin.debug:
+            var: >-
+              __t_failed_items | map(attribute='name')
+          when:
+            - '__t_failed_items is defined'
+            - '__t_failed_items | length > 0'
+
+        - name: 'check_content_view_timestamp_attr_last_published | Fail with meaningful error message'
+          ansible.builtin.fail:
+            msg: >-
+              Above Content Views/Composite Contents views have a timestamp format defined which is unknown to this
+              role. *Usually*, it is defined as '%Y-%m-%d %H:%M:%S %Z', but the Satellite API response returned
+              something else and therefore this role cannot continue.
+...

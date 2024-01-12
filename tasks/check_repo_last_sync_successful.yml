@@ -1,0 +1,44 @@
+---
+- name: 'check_repo_last_sync_successful | Block: Handle checking of successful Repository synchronization'
+  block:
+
+    - name: >-
+        check_repo_last_sync_successful | Ensure that all Repositories included in the (Composite) Content Views
+        finished synchronizing successfully
+      ansible.builtin.assert:
+        that:
+          - >-
+            __t_filtered_repositories |
+            selectattr('last_sync.result', '!=', 'success') |
+            length == 0
+
+        success_msg: >-
+          All Repositories included in the Content Views/Composite Content Views finished
+          synchronizing successfully
+        fail_msg: >-
+          Found at least Repository that did not successfully synchronize which is included in at
+          least one Content View/Composite Content View
+        quiet: '{{ _sat_quiet_assert }}'
+      register: '__t_has_unsuccessul_repository_synchronizations'
+
+  always:
+
+    - name: 'check_repo_last_sync_successful | Block: Handle error case'
+      when:
+        - '__t_has_unsuccessul_repository_synchronizations.failed is defined'
+        - '__t_has_unsuccessul_repository_synchronizations.failed'
+      block:
+
+        - name: 'check_repo_last_sync_successful | List all Repositories that did not successfully synchronize'
+          ansible.builtin.debug:
+            var: >-
+              __t_filtered_repositories |
+              selectattr('last_sync.result', '!=', 'success') |
+              map(attribute='name')
+
+        - name: 'check_repo_last_sync_successful | Fail with meaningful error message'
+          ansible.builtin.fail:
+            msg: >-
+              Above Repositories included in the Content Views/Composite Contents Views did not synchronize
+              sucessfully the last time they were synchronized
+...

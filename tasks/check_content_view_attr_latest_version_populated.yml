@@ -1,0 +1,80 @@
+---
+- name: >-
+    check_content_view_attr_latest_version_populated | Block: Handle Content Views/Composite Content Views
+    which have latest_version not populated
+  block:
+
+    - name: >-
+        check_content_view_attr_latest_version_populated | Ensure that all Content Views/Composite Content
+        Viewss have the attribute 'latest_version' populated
+      ansible.builtin.assert:
+        that:
+          # is not None
+          - >-
+            __t_filtered_content_views |
+            selectattr('latest_version', '==', None) |
+            length == 0
+
+          # is number
+          - >-
+            __t_filtered_content_views |
+            rejectattr('latest_version', 'number') |
+            length == 0
+
+          # is float
+          - >-
+            __t_filtered_content_views |
+            rejectattr('latest_version', 'float') |
+            length == 0
+
+        success_msg: 'All Content Views/Composite Content Views have the attribute latest_version populated'
+        fail_msg: >-
+          At least one Content View/Composite Content View does not have the attribute latest_version
+          correctly populated
+        quiet: '{{ _sat_quiet_assert }}'
+      register: '__t_has_latest_version_populated'
+
+  always:
+
+    - name: 'check_content_view_attr_latest_version_populated | Block: Handle error case'
+      when:
+        - '__t_has_latest_version_populated.failed is defined'
+        - '__t_has_latest_version_populated.failed'
+      block:
+
+        - name: >-
+            check_content_view_attr_latest_version_populated | Collect all Content Views/Composite Content Views
+            with an incorrectly populated attribute latest_version
+          ansible.builtin.set_fact:
+            __t_failed_items: >-
+              {{
+                __t_failed_items | default([]) + [
+                  {
+                    'name': __t_failed_item.name,
+                    'latest_version': __t_failed_item.latest_version
+                  }
+                ]
+              }}
+          loop: '{{ __t_filtered_content_views }}'
+          loop_control:
+            loop_var: '__t_failed_item'
+            label: '{{ __t_failed_item.name }}'
+          when: >-
+            __t_failed_item.latest_version != None
+            or __t_failed_item.latest_version is not number
+            or __t_failed_item.latest_version is not float
+
+        - name: >-
+            check_content_view_attr_latest_version_populated | List all Content Views/Composite Content Views
+            with an incorrectly populated attribute latest_version
+          ansible.builtin.debug:
+            var: '__t_failed_items'
+
+        - name: 'check_content_view_attr_latest_version_populated | Fail with meaningful error message'
+          ansible.builtin.fail:
+            msg: >-
+              Above Content Views/Composite Contents Views have not correctly populated the 'latest_version' attribute.
+              This means that either the Content Views/Composite Content Views have not been published yet, and
+              therefore cannot be promoted or latest_version is an unknown format to this role. In any case, this role
+              cannot safely continue.
+...

@@ -1,0 +1,37 @@
+---
+- name: 'content_view_retrieval | Retrieve all Content Views/Composite Content Views'
+  redhat.satellite.resource_info:
+    username: >-
+      {{
+        _satellite_username
+        if _satellite_username is defined and _satellite_username != ''
+        else
+        omit
+      }}
+    password: >-
+      {{
+        _satellite_password
+        if _satellite_password is defined and _satellite_password != ''
+        else
+        omit
+      }}
+    server_url: >-
+      {{
+        _satellite_server_url
+        if _satellite_server_url is defined and _satellite_server_url != ''
+        else
+        omit
+      }}
+    validate_certs: >-
+      {{
+        _satellite_validate_certs
+        if _satellite_validate_certs is defined and _satellite_validate_certs | string != ''
+        and _satellite_validate_certs != None
+        else
+        omit
+      }}
+    organization: '{{ _satellite_organization }}'
+    resource: 'content_views'
+    search: '{{ __t_search_string }}'
+  register: '__t_content_views'
+...

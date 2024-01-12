@@ -1,0 +1,42 @@
+---
+- name: 'test_timestamp | Check if timestamp can be converted to a date/time object'
+  ansible.builtin.assert:
+    that:
+      - '__t_test_item is defined'
+      - '__t_attribute is defined'
+      # adding __t_test_item to a list prior to selecting the attribute is done for merely
+      # the reason that it is not possible (to my knowledge) to access sub keys of a dictionary
+      # when the attribute to access is in a variable (__t_attribute) *and* it is a nested key.
+      # with map a nested attribute can be selected.
+      #
+      # background:
+      # with a single key (e.g. __t_attribute='my_key') it would have worked by checking
+      # __t_test_item[__t_attribute], but with a nested key (e.g. 'last_sync.ended_at') this would
+      # resolve to __t_test_item['last_sync.ended_at'] while in fact it would need to be
+      # __t_test_item['last_sync']['ended_at']
+      - >-
+        [__t_test_item] |
+        map(attribute=__t_attribute, default=[]) |
+        length > 0
+
+      - >-
+        [__t_test_item] |
+        map(attribute=__t_attribute, default=[]) |
+        first |
+        ansible.builtin.to_datetime(format=_sat_api_timestamp_format)
+
+  ignore_errors: true
+  register: '__t_timestamp_check'
+
+- name: 'test_timestamp | Add failed item to failed items list'
+  ansible.builtin.set_fact:
+    __t_failed_items: >-
+      {{
+        __t_failed_items | default([]) + [
+          __t_test_item
+        ]
+      }}
+  when:
+    - '__t_timestamp_check.failed is defined'
+    - '__t_timestamp_check.failed'
+...

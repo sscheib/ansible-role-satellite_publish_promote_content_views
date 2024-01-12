@@ -1,0 +1,17 @@
+---
+- name: 'check_repo_attr_name | Ensure all Repositories returned by the Satellite API have a name attribute defined'
+  ansible.builtin.assert:
+    that:
+      - >-
+        __t_repositories.resources |
+        selectattr('name', 'undefined') |
+        length == 0
+
+    success_msg: 'All Repositories have a name attribute defined'
+    fail_msg: >-
+      {{
+        'At least one Repository does not have the name attribute defined and this role cannot continue:' ~
+        __t_repositories.resources | selectattr('name', 'undefined')
+      }}
+    quiet: '{{ _sat_quiet_assert }}'
+...

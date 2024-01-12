@@ -1,0 +1,67 @@
+---
+- name: 'wait_for_repo_sync | Wait for the Repository Synchronization to finish'
+  redhat.satellite.wait_for_task:
+    username: >-
+      {{
+        _satellite_username
+        if _satellite_username is defined and _satellite_username != ''
+        else
+        omit
+      }}
+    password: >-
+      {{
+        _satellite_password
+        if _satellite_password is defined and _satellite_password != ''
+        else
+        omit
+      }}
+    server_url: >-
+      {{
+        _satellite_server_url
+        if _satellite_server_url is defined and _satellite_server_url != ''
+        else
+        omit
+      }}
+    validate_certs: >-
+      {{
+        _satellite_validate_certs
+        if _satellite_validate_certs is defined and _satellite_validate_certs | string != ''
+        and _satellite_validate_certs != None
+        else
+        omit
+      }}
+    task: '{{ __t_task_id }}'
+    timeout: 60
+  async: '{{ _sat_async_max_time }}'
+  poll: '{{ _sat_async_poll_time }}'
+  register: '__t_async_repository_synchronization'
+  loop: >-
+    {{
+      __t_filtered_repositories |
+      map(attribute='last_sync') |
+      rejectattr('state', '==', 'stopped') |
+      map(attribute='id') |
+      ansible.builtin.flatten
+    }}
+  loop_control:
+    loop_var: '__t_task_id'
+
+- name: 'wait_for_repo_sync | Asynchronously wait for the Repository synchronization to finish'
+  ansible.builtin.async_status:
+    jid: '{{ __t_repo_sync_job.ansible_job_id }}'
+  until: '__t_async_result_repository_synchronization.finished'
+  retries: '{{ _sat_async_retries }}'
+  delay: '{{ _sat_async_check_delay }}'
+  register: '__t_async_result_repository_synchronization'
+  loop: '{{ __t_async_repository_synchronization.results }}'
+  loop_control:
+    loop_var: '__t_repo_sync_job'
+    label: '{{ __t_repo_sync_job.__t_task_id }}'
+  when:
+    - '__t_repo_sync_job.ansible_job_id is defined'
+    - "__t_repo_sync_job.ansible_job_id != ''"
+
+- name: 'wait_for_repo_sync | Set fact that the Repository synchronization finished'
+  ansible.builtin.set_fact:
+    __t_repo_sync_finished: true
+...

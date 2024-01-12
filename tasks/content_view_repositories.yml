@@ -1,0 +1,39 @@
+---
+- name: >-
+    content_view_repositories | Include tasks to ensure that all Content Views/Composite Content Views
+    have the last published attribute defined
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_attr_last_published.yml'
+
+- name: >-
+    content_view_repositories | Include tasks to ensure that all published Content Views/Composite Content Views
+    have a valid timestamp set
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_timestamp_attr_last_published.yml'
+
+- name: >-
+    content_view_repositories | Include tasks to ensure that no Content Views/Composite Content Views without
+    Repositories are present
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_attr_repositories.yml'
+
+- name: >-
+    content_view_repositories | Include tasks to ensure that all Repositories included in Content
+    Views/Composite Content Views have a name attribute defined
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_repo_attr_name.yml'
+
+# We need to do this as otherwise the previous __t_content_view_versions, which might at this point have been
+# used for Content View versions, would simply be extended for the Composite Content View versions.
+- name: >-
+    content_view_repositories | Set fact: Ensure the list of filtered Content Views/Composite Content Views
+    used is reset
+  ansible.builtin.set_fact:
+    __t_filtered_content_views: []
+
+- name: >-
+    content_view_repositories | Include tasks to filter excluded Repositories from Content
+    Views/Composite Content Views
+  ansible.builtin.include_tasks:
+    file: 'filter_content_view_repositories.yml'
+...

@@ -1,0 +1,558 @@
+---
+- name: 'assert | Ensure _sat_quiet_assert is defined properly'
+  ansible.builtin.assert:
+    that:
+      - "lookup('ansible.builtin.vars', __t_var) is defined"
+      - "lookup('ansible.builtin.vars', __t_var) is boolean"
+      - "lookup('ansible.builtin.vars', __t_var) | bool | string == lookup('ansible.builtin.vars', __t_var) | string"
+    success_msg: "Variable '{{ __t_var }}' defined properly - value: '{{ lookup('ansible.builtin.vars', __t_var) }}'"
+    fail_msg: "Variable '{{ __t_var }}' failed to validate"
+    quiet: '{{ _sat_quiet_assert | default(false) }}'
+  loop:
+    - '_sat_quiet_assert'
+  loop_control:
+    loop_var: '__t_var'
+
+- name: >-
+    assert | Ensure either _satellite_server_url is defined or the server URL is provided via environment variables
+  ansible.builtin.assert:
+    that:
+      # is defined and not empty
+      - >-
+        (
+          _satellite_server_url is defined
+          and _satellite_server_url | default('') != ''
+        )
+        or lookup('ansible.builtin.env', 'SATELLITE_SERVER_URL', default='') != ''
+        or lookup('ansible.builtin.env', 'SATELLITE_SERVER', default='') != ''
+        or lookup('ansible.builtin.env', 'SATELLITE_URL', default='') != ''
+
+      # is string
+      - >-
+        (
+          _satellite_server_url is defined
+          and _satellite_server_url | default('') != ''
+        ) | ansible.builtin.ternary(
+          _satellite_server_url is string,
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_SERVER_URL', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_SERVER_URL', default='') is string
+          )
+          or
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_SERVER', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_SERVERL', default='') is string
+          )
+          or
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_URL', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_URL', default='') is string
+          )
+        )
+
+      # is not None
+      - >-
+        (
+          _satellite_server_url is defined
+          and _satellite_server_url | default('') != ''
+        ) | ansible.builtin.ternary(
+          _satellite_server_url != None,
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_SERVER_URL', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_SERVER_URL', default='') != None
+          )
+          or
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_SERVER', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_SERVER', default='') != None
+          )
+          or
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_URL', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_URL', default='') != None
+          )
+        )
+
+      # scheme is defined
+      - >-
+        (
+          _satellite_server_url is defined
+          and _satellite_server_url | default('') != ''
+        ) | ansible.builtin.ternary(
+           _satellite_server_url | ansible.builtin.urlsplit('scheme') is search('^https?$'),
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_SERVER_URL', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_SERVER_URL', default='') |
+            ansible.builtin.urlsplit('scheme') is search('^https?$')
+          )
+          or
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_SERVER', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_SERVER', default='') |
+            ansible.builtin.urlsplit('scheme') is search('^https?$')
+          )
+          or
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_URL', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_URL', default='') |
+            ansible.builtin.urlsplit('scheme') is search('^https?$')
+          )
+        )
+    success_msg: >-
+      The Satellite server URL is defined properly either via the variable _satellite_server_url or
+      an environment variable
+    fail_msg: >-
+      The Satellite server URL is either not defined or when defined via either the variable
+      _satellite_server_url or an environment variable failed to validate.
+    quiet: '{{ _sat_quiet_assert }}'
+
+- name: 'assert | Ensure either _satellite_username is defined or the password is provided via environment variables'
+  ansible.builtin.assert:
+    that:
+      # is defined and not empty
+      - >-
+        (
+          _satellite_username is defined
+          and _satellite_username | default('') != ''
+        )
+        or lookup('ansible.builtin.env', 'SATELLITE_USERNAME', default='') != ''
+        or lookup('ansible.builtin.env', 'SATELLITE_USER', default='') != ''
+
+      # is string
+      - >-
+        (
+          _satellite_username is defined
+          and _satellite_username | default('') != ''
+        ) | ansible.builtin.ternary(
+          _satellite_username is string,
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_USERNAME', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_USERNAME', default='') is string
+          )
+          or
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_USER', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_USER', default='') is string
+          )
+        )
+
+      # is not None
+      - >-
+        (
+          _satellite_username is defined
+          and _satellite_username | default('') != ''
+        ) | ansible.builtin.ternary(
+          _satellite_username != None,
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_USERNAME', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_USERNAME', default='') != None
+          )
+          or
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_USER', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_USER', default='') != None
+          )
+        )
+    success_msg: >-
+      The Satellite username is defined properly either via the variable _satellite_username or
+      an environment variable
+    fail_msg: >-
+      The Satellite username defined via either the variable _satellite_username or an environment
+      variable failed to validate
+    quiet: '{{ _sat_quiet_assert }}'
+
+- name: 'assert | Ensure either _satellite_password is defined or the password is provided via environment variables'
+  ansible.builtin.assert:
+    that:
+      # is defined and not empty
+      - >-
+        (
+          _satellite_password is defined
+          and _satellite_password | default('') != ''
+        )
+        or lookup('ansible.builtin.env', 'SATELLITE_PASSWORD', default='') != ''
+
+      # is string
+      - >-
+        (
+          _satellite_password is defined
+          and _satellite_password | default('') != ''
+        ) | ansible.builtin.ternary(
+          _satellite_password is string,
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_PASSWORD', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_PASSWORD', default='') is string
+          )
+        )
+
+      # is not None
+      - >-
+        ( _satellite_password is defined
+          and _satellite_password | default('') != ''
+        ) | ansible.builtin.ternary(
+          _satellite_password != None,
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_PASSWORD', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_PASSWORD', default='') != None
+          )
+        )
+    success_msg: >-
+      The Satellite password is defined properly either via the variable _satellite_password or
+      an environment variable
+    fail_msg: >-
+      The Satellite password defined via either the variable _satellite_password or an environment
+      variable failed to validate.
+
+- name: >-
+    assert | Ensure _satellite_validate_certs is defined properly (if defined) or whether it is properly defined when
+    specified via an environment variable (if defined)
+  ansible.builtin.assert:
+    # since we look up a boolean variable a check for length needs to be done on
+    # a string type (as a boolean as no len() method), therefore converting it to a string.
+    # If the length is greater than 0 we know that the variable is defined, otherwise it would be
+    # 0, as '' evaluates to 0 :)
+    # The lookup ansible.builtin.vars will error out, if no default is provided and the variable is
+    # not found. Unfortunately, it is not possible to pass a long an 'empty' boolean (like in empty
+    # lists, dicts, string, etc.), therefore we need to think a little out of the box to make this
+    # work.
+    that:
+      # specified via variable _satellite_validate_certs
+      #
+
+      # type correctly detected
+      - >-
+        (
+          _satellite_validate_certs is defined
+          and _satellite_validate_certs | default('') | string != ''
+          and _satellite_validate_certs | default('') != None
+        ) | ansible.builtin.ternary(
+          _satellite_validate_certs | bool | string == _satellite_validate_certs | string,
+          true
+        )
+
+      # is boolean
+      - >-
+        (
+          _satellite_validate_certs is defined
+          and _satellite_validate_certs | default('') | string != ''
+          and _satellite_validate_certs | default('') != None
+        ) | ansible.builtin.ternary(
+          _satellite_validate_certs is boolean,
+          true
+        )
+
+      # specified via environment variable SATELLITE_VALIDATE_CERTS
+      #
+
+      # type correctly detected
+      - >-
+        (
+          lookup('ansible.builtin.env', 'SATELLITE_VALIDATE_CERTS', default='') != ''
+        ) | ansible.builtin.ternary(
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_VALIDATE_CERTS', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_VALIDATE_CERTS', default='') | bool | string ==
+            lookup('ansible.builtin.env', 'SATELLITE_VALIDATE_CERTS', default='') | string
+          ),
+          true
+        )
+
+      # is boolean
+      - >-
+        (
+          lookup('ansible.builtin.env', 'SATELLITE_VALIDATE_CERTS', default='') != ''
+        ) | ansible.builtin.ternary(
+          (
+            lookup('ansible.builtin.env', 'SATELLITE_VALIDATE_CERTS', default='') != ''
+            and lookup('ansible.builtin.env', 'SATELLITE_VALIDATE_CERTS', default='') is boolean
+          ),
+          true
+        )
+
+    success_msg: >-
+      {{
+        'Satellite certificate validation is defined properly either via the variable _satellite_validate_certs
+        or an environment variable'
+        if (
+          _satellite_validate_certs is defined and _satellite_validate_certs | default('') != ''
+        ) or lookup('ansible.builtin.env', 'SATELLITE_VALIDATE_CERTS', default='') != ''
+        else
+        'Satellite certificate validation is not defined via either the variable _satellite_validate_cert
+        or an environment variable'
+      }}
+    fail_msg: >-
+      Satellite certificate validation defined via either the variable _satellite_validate_certs or an
+      environment variable failed to validate.
+    quiet: '{{ _sat_quiet_assert }}'
+
+- name: 'assert | Ensure string variables are defined properly'
+  ansible.builtin.assert:
+    that:
+      - "lookup('ansible.builtin.vars', __t_var) is defined"
+      - "lookup('ansible.builtin.vars', __t_var) is string"
+      - "lookup('ansible.builtin.vars', __t_var) != None"
+      - "lookup('ansible.builtin.vars', __t_var) != ''"
+    success_msg: "Variable '{{ __t_var }}' defined properly - value: '{{ lookup('ansible.builtin.vars', __t_var) }}'"
+    fail_msg: "Variable '{{ __t_var }}' failed to validate"
+    quiet: '{{ _sat_quiet_assert }}'
+  loop:
+    - '_satellite_organization'
+    - '_sat_api_timestamp_format'
+  loop_control:
+    loop_var: '__t_var'
+
+- name: 'assert | Ensure Satellite server URL has a valid scheme (http/https) set'
+  ansible.builtin.assert:
+    that:
+      - "_satellite_server_url | ansible.builtin.urlsplit('scheme') is search('^https?$')"
+    success_msg: 'Variable _satellite_server_url has a valid scheme set.'
+    fail_msg: 'Variable _satellite_server_url has no valid scheme (http/https) set.'
+    quiet: '{{ _sat_quiet_assert }}'
+
+- name: 'assert | Ensure Content View kinds to process are defined properly'
+  ansible.builtin.assert:
+    that:
+      - '_sat_content_view_kinds is defined'
+      - >-
+        _sat_content_view_kinds in [
+          'content_views',
+          'composite_content_views',
+          'both'
+        ]
+    success_msg: "Variable '_sat_content_view_kinds' defined properly - value: '{{ _sat_content_view_kinds }}'"
+    fail_msg: >-
+      Variable '_sat_content_view_kinds' failed to validate. Allowed values are: 'content_views',
+      'composite_content_views', 'both'. Received value: '{{ _sat_content_view_kinds | default(None) }}'
+    quiet: '{{ _sat_quiet_assert }}'
+
+- name: 'assert | Ensure integer variables are defined properly'
+  ansible.builtin.assert:
+    that:
+      - "lookup('ansible.builtin.vars', __t_var) is defined"
+      - "lookup('ansible.builtin.vars', __t_var) | int | string == lookup('ansible.builtin.vars', __t_var) | string"
+      - "lookup('ansible.builtin.vars', __t_var) | int is number"
+      - "lookup('ansible.builtin.vars', __t_var) | int is integer"
+      - "lookup('ansible.builtin.vars', __t_var) | int >= 0"
+    success_msg: "Variable '{{ __t_var }}' defined properly - value: '{{ lookup('ansible.builtin.vars', __t_var) }}'"
+    fail_msg: "Variable '{{ __t_var }}' failed to validate"
+    quiet: '{{ _sat_quiet_assert }}'
+  loop:
+    - '_sat_async_max_time'
+    - '_sat_async_poll_time'
+    - '_sat_async_retries'
+    - '_sat_async_check_delay'
+  loop_control:
+    loop_var: '__t_var'
+
+- name: 'assert | Ensure optional string variables are defined properly - if defined'
+  ansible.builtin.assert:
+    that:
+      - "lookup('ansible.builtin.vars', __t_var) is defined"
+      - "lookup('ansible.builtin.vars', __t_var) is string"
+      - "lookup('ansible.builtin.vars', __t_var) != None"
+      - "lookup('ansible.builtin.vars', __t_var) != ''"
+    success_msg: "Variable '{{ __t_var }}' defined properly - value: '{{ lookup('ansible.builtin.vars', __t_var) }}'"
+    fail_msg: "Variable '{{ __t_var }}' failed to validate"
+    quiet: '{{ _sat_quiet_assert }}'
+  when: >-
+    lookup('ansible.builtin.vars', __t_var, default='') is defined
+    and lookup('ansible.builtin.vars', __t_var, default='') != ''
+    and lookup('ansible.builtin.vars', __t_var, default='') != None
+  loop:
+    - '_sat_content_view_version_description'
+    - '_sat_composite_content_view_version_description'
+  loop_control:
+    loop_var: '__t_var'
+
+- name: 'assert | Ensure optional list variables are defined properly - if defined'
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          lookup('ansible.builtin.vars', __t_var, default=[]) is defined
+          and lookup('ansible.builtin.vars', __t_var, default=[]) != None
+          and lookup('ansible.builtin.vars', __t_var, default=[]) | length > 0
+        ) | ansible.builtin.ternary(
+          lookup('ansible.builtin.vars', __t_var, default=[]) is not string, true
+        )
+
+      - >-
+        (
+          lookup('ansible.builtin.vars', __t_var, default=[]) is defined
+          and lookup('ansible.builtin.vars', __t_var, default=[]) != None
+          and lookup('ansible.builtin.vars', __t_var, default=[]) | length > 0
+        ) | ansible.builtin.ternary(
+          lookup('ansible.builtin.vars', __t_var, default=[]) is not mapping, true
+        )
+
+      - >-
+        (
+          lookup('ansible.builtin.vars', __t_var, default=[]) is defined
+          and lookup('ansible.builtin.vars', __t_var, default=[]) != None
+          and lookup('ansible.builtin.vars', __t_var, default=[]) | length > 0
+        ) | ansible.builtin.ternary(
+          lookup('ansible.builtin.vars', __t_var, default=[]) is iterable, true
+        )
+
+      - >-
+        (
+          lookup('ansible.builtin.vars', __t_var, default=[]) is defined
+          and lookup('ansible.builtin.vars', __t_var, default=[]) != None
+          and lookup('ansible.builtin.vars', __t_var, default=[]) | length > 0
+        ) | ansible.builtin.ternary(
+          lookup('ansible.builtin.vars', __t_var, default=[]) is sequence, true
+        )
+
+    success_msg: >-
+      {{
+        'Variable ' ~ __t_var ~ ' defined properly - value: ' ~ lookup('ansible.builtin.vars', __t_var)
+        if lookup('ansible.builtin.vars', __t_var, default=[]) != None and
+        lookup('ansible.builtin.vars', __t_var, default=[]) | length > 0
+        else
+        'Variable ' ~ __t_var ~ ' is not defined or is an empty list'
+      }}
+    fail_msg: "Variable '{{ __t_var }}' failed to validate"
+    quiet: '{{ _sat_quiet_assert }}'
+  loop:
+    - '_sat_content_views_allowed_lifecycle_environments'
+    - '_sat_composite_content_views_allowed_lifecycle_environments'
+    - '_sat_excluded_content_views'
+    - '_sat_excluded_composite_content_views'
+    - '_sat_excluded_repositories'
+  loop_control:
+    loop_var: '__t_var'
+
+- name: 'assert | Ensure optional boolean variables are defined properly - if defined'
+  ansible.builtin.assert:
+    # the same applies as for _satellite_validate_certs above
+    that:
+      - >-
+        (
+          lookup('ansible.builtin.vars', __t_var, default='') is defined
+          and lookup('ansible.builtin.vars', __t_var, default='') | string != ''
+          and lookup('ansible.builtin.vars', __t_var, default='') != None
+        ) | ansible.builtin.ternary(
+          lookup('ansible.builtin.vars', __t_var) | bool | string ==
+          lookup('ansible.builtin.vars', __t_var) | string, true
+        )
+
+      - >-
+        (
+          lookup('ansible.builtin.vars', __t_var, default='') is defined
+          and lookup('ansible.builtin.vars', __t_var, default='') | string != ''
+          and lookup('ansible.builtin.vars', __t_var, default='') != None
+        ) | ansible.builtin.ternary(
+          lookup('ansible.builtin.vars', __t_var) is boolean, true
+        )
+    success_msg: >-
+      {{
+        'Variable ' ~ __t_var ~ ' defined properly - value: ' ~ lookup('ansible.builtin.vars', __t_var)
+        if lookup('ansible.builtin.vars', __t_var, default='') | string | length > 0
+        else
+        'Variable ' ~ __t_var ~ ' is not defined'
+      }}
+    fail_msg: "Variable '{{ __t_var }}' failed to validate"
+    quiet: '{{ _sat_quiet_assert }}'
+  loop:
+    - '_sat_only_promote_content_views'
+    - '_sat_only_promote_composite_content_views'
+    - '_sat_publish_based_on_repository'
+    - '_sat_check_unsynchronized_repositories'
+    - '_sat_check_synchronizing_repositories'
+    - '_sat_wait_for_repository_synchronization'
+    - '_sat_check_successful_repository_synchronization'
+    - '_sat_synchronize_repositories'
+    - '_sat_publish_based_on_component'
+    - '_sat_show_summary'
+  loop_control:
+    loop_var: '__t_var'
+
+- name: 'assert | Ensure _satellite_content_views is defined properly'
+  ansible.builtin.assert:
+    that:
+      - '_satellite_content_views is defined'
+      - '_satellite_content_views is not string'
+      - '_satellite_content_views is not mapping'
+      - '_satellite_content_views is iterable'
+      - '_satellite_content_views is sequence'
+    success_msg: "Variable '_satellite_content_views' defined properly."
+    fail_msg: "Variable '_satellite_content_views' failed to validate"
+    quiet: '{{ _sat_quiet_assert }}'
+
+- name: 'assert | Ensure Content Views of _satellite_content_views are defined properly'
+  ansible.builtin.assert:
+    that:
+      # __t_content_view
+      - '__t_content_view is defined'
+      - '__t_content_view is not string'
+      - '__t_content_view is iterable'
+      - '__t_content_view is mapping'
+
+      # __t_content_view.name
+      - '__t_content_view.name is defined'
+      - '__t_content_view.name is string'
+      - "__t_content_view.name != ''"
+      - '__t_content_view.name != None'
+
+      # __t_content_view.patch_day_exclude
+      #
+      # patch_day_exclude is optional, therefore the condition will evaluate to true,
+      # if it is not defined. Otherwise the check needs to pass, else it will fail.
+
+      - >-
+        (__t_content_view.patch_day_exclude is defined) |
+        ansible.builtin.ternary(
+          __t_content_view.patch_day_exclude | default(None) | bool | string ==
+          __t_content_view.patch_day_exclude | default(None) | string, true
+        )
+
+      - >-
+        (__t_content_view.patch_day_exclude is defined) |
+        ansible.builtin.ternary(
+          __t_content_view.patch_day_exclude | default(None) is boolean, true
+        )
+
+      # __t_content_view.lifecycle_environments
+      #
+      # lifecycle_environments is optional, therefore the condition will evaluate to true,
+      # if it is not defined. Otherwise the check needs to pass, else it will fail.
+
+      - >-
+        (__t_content_view.lifecycle_environments is defined) |
+        ansible.builtin.ternary(
+          __t_content_view.lifecycle_environments | default(None) is not string, true
+        )
+
+      - >-
+        (__t_content_view.lifecycle_environments is defined) |
+        ansible.builtin.ternary(
+          __t_content_view.lifecycle_environments | default(None) is not mapping, true
+        )
+
+      - >-
+        (__t_content_view.lifecycle_environments is defined) |
+        ansible.builtin.ternary(
+          __t_content_view.lifecycle_environments | default(None) is iterable, true
+        )
+
+      - >-
+        (__t_content_view.lifecycle_environments is defined) |
+        ansible.builtin.ternary(
+          __t_content_view.lifecycle_environments | default(None) is sequence, true
+        )
+
+      - >-
+        (__t_content_view.lifecycle_environments is defined) |
+        ansible.builtin.ternary(
+          __t_content_view.lifecycle_environments | default([]) | list | string ==
+          __t_content_view.lifecycle_environments | default([]) | string, true
+        )
+
+    success_msg: 'Content View {{ __t_content_view.name }} defined properly.'
+    fail_msg: 'One or more Content Views failed to validate.'
+    quiet: '{{ _sat_quiet_assert }}'
+  loop: '{{ _satellite_content_views }}'
+  loop_control:
+    loop_var: '__t_content_view'
+    label: "{{ __t_content_view.name | default('') }}"
+...

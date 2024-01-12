@@ -1,0 +1,73 @@
+---
+- name: 'component_based_publishing | Include tasks to retrieve all Composite Content Views from the Satellite API'
+  ansible.builtin.include_tasks:
+    file: 'content_view_retrieval.yml'
+  vars:
+    __t_search_string: 'composite = true AND name != "Default Organization View"'
+    # search string for redhat.satellite.resource_info
+    #
+    # NOTE: it is important to keep the inner quotes as double quotes ("),
+    # as otherwise Satellite will *not* find *any* Content Views
+
+- name: >-
+    component_based_publishing | Include tasks to ensure that all Composite Content Views define the name attribute
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_attr_name.yml'
+
+- name: 'component_based_publishing | Include tasks to exclude Composite Content Views'
+  ansible.builtin.include_tasks:
+    file: 'content_view_exclusion.yml'
+  vars:
+    __t_reject_content_views: '{{ _sat_excluded_composite_content_views | default([]) }}'
+
+- name: >-
+    component_based_publishing | Include tasks to ensure that all Composite Content Views
+    define the components attribute
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_attr_components.yml'
+
+- name: >-
+    component_based_publishing | Include tasks to ensure that all Composite Content Views
+    populate the components attribute
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_attr_components_populated.yml'
+
+- name: >-
+    component_based_publishing | Include tasks to ensure that all Composite Content Views
+    define the needs_publish attribute
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_attr_needs_publish.yml'
+
+- name: >-
+    component_based_publishing | Include tasks to ensure that all Composite Content Views
+    populate the needs_publish attribute
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_attr_needs_publish_populated.yml'
+
+- name: 'component_based_publishing | Collect Composite Content Views that require publishing'
+  ansible.builtin.set_fact:
+    __t_composite_content_view_publish_required: >-
+      {{
+        __t_excluded_content_views |
+        selectattr('needs_publish', 'defined') |
+        selectattr('needs_publish', '==', true)
+      }}
+
+- name: 'component_based_publishing | Debug: __t_composite_content_view_publish_requiredi (names only)'
+  ansible.builtin.debug:
+    var: >-
+        __t_composite_content_view_publish_required | map(attribute='name')
+    verbosity: 1
+
+- name: 'component_based_publishing | Debug: __t_composite_content_view_publish_required'
+  ansible.builtin.debug:
+    var: '__t_composite_content_view_publish_required'
+    verbosity: 2
+
+- name: 'component_based_publishing | Include tasks to publish and optionally promote Composite Content Views'
+  ansible.builtin.include_tasks:
+    file: 'publish_promote.yml'
+  vars:
+    __t_content_views_publish_required: '{{ __t_composite_content_view_publish_required }}'
+  when: '__t_composite_content_view_publish_required | length > 0'
+...

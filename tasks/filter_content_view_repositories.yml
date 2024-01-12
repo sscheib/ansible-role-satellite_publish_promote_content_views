@@ -1,0 +1,73 @@
+---
+- name: 'filter_content_view_repositories | Filter excluded Repositories from the Content Views/Composite Content Views'
+  ansible.builtin.set_fact:
+    # below expression looks way more complex than it actually is
+    #
+    # We first select the current Content View's (__t_content_view) Repositories and build a list of them using
+    # map(attribute='repositories). From that list, we reject all Repositories which are present in
+    # _sat_excluded_repositories. For that, we need to essentially re-build the first part of the expression, as we
+    # lose access to all attributes which are not inside the repositories attribute (as we map'ed a list out of the
+    # repositories attribute).
+    #
+    # If, after rejecting the excluded Repositories, the length is greater than zero, we add a new list item
+    # (a (Composite) Content View) to __t_filtered_content_views without the Repositories excluded via
+    # _sat_excluded_repositories. To accomplish this, we select the current Content View (__t_content_view)
+    # from __t_excluded_content_views and create a list of key/value pairs out of it (dict2item), which enables
+    # us to reject the key with value 'repositories', as we want to replace it. After we removed the key, we
+    # re-assemble a dictionary out of the key/value pairs, but without, as said 'repositories'.
+    # Finally we combine the dictionary with another one, that only contains one attribute: 'repositories'.
+    #
+    # The Repositories to add are evaluated exactly the same way it was done at the very top. With that
+    # we have a modified (Composite) Content View dictionary, without the excluded Repositories :)
+    #
+    # In case the very first expression evaluates to zero, we add an empty list item to the list
+    # __t_filtered_content_views. Unfortunately, it is no longer possible to 'omit' in set_fact without causing
+    # an error (see https://github.com/ansible/ansible/issues/74851)
+    __t_filtered_content_views: >-
+      {{
+        (
+          __t_excluded_content_views |
+          selectattr('name', '==', __t_content_view) |
+          map(attribute='repositories', default=[]) |
+          ansible.builtin.flatten |
+          rejectattr('name', 'in',
+            __t_excluded_content_views |
+            selectattr('name', '==', __t_content_view) |
+            map(attribute='repositories', default=[]) |
+            ansible.builtin.flatten |
+            map(attribute='name') |
+            ansible.builtin.intersect(_sat_excluded_repositories)
+          ) | length > 0
+        ) | ansible.builtin.ternary(
+          __t_filtered_content_views | default([]) + [
+            __t_excluded_content_views |
+            selectattr('name', '==', __t_content_view) |
+            first |
+            ansible.builtin.dict2items |
+            rejectattr('key', '==', 'repositories') |
+            ansible.builtin.items2dict |
+            ansible.builtin.combine(
+              {
+                'repositories':
+                  __t_excluded_content_views |
+                  selectattr('name', '==', __t_content_view) |
+                  map(attribute='repositories', default=[]) |
+                  ansible.builtin.flatten |
+                  rejectattr('name', 'in',
+                    __t_excluded_content_views |
+                    selectattr('name', '==', __t_content_view) |
+                    map(attribute='repositories', default=[]) |
+                    ansible.builtin.flatten |
+                    map(attribute='name') |
+                    ansible.builtin.intersect(_sat_excluded_repositories)
+                  )
+              }
+            )
+          ],
+          __t_filtered_content_views | default([]) + []
+        )
+      }}
+  loop: "{{ __t_excluded_content_views | map(attribute='name') }}"
+  loop_control:
+    loop_var: '__t_content_view'
+...

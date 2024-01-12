@@ -1,0 +1,56 @@
+---
+- name: >-
+    check_content_view_repo_attr_name | Block: Handle checking Content Views/Composite Content Views Repository names
+  block:
+
+    - name: >-
+        check_content_view_repo_attr_name | Ensure Repositories included in Content Views/Composite Content Views
+        have the name attribute defined
+      ansible.builtin.assert:
+        that:
+          # 'name' is defined for all Repositories in all (Composite) Content Views
+          - >-
+            __t_excluded_content_views |
+            map(attribute='repositories') |
+            ansible.builtin.flatten |
+            selectattr('name', 'undefined') |
+            length == 0
+
+        success_msg: 'All Repositories included in Content Views/Composite Content Views have a name attribute set'
+        fail_msg: >-
+          At least one Repository included in at least one Content View/Composite Content View has
+          no name attribute set
+        quiet: '{{ _sat_quiet_assert }}'
+      register: '__t_has_repository_without_name'
+
+  always:
+
+    - name: 'check_content_view_repo_attr_name | Block: Handle error case'
+      when:
+        - '__t_has_repository_without_name.failed is defined'
+        - '__t_has_repository_without_name.failed'
+      block:
+
+        - name: >-
+            check_content_view_repo_attr_name | List all Repositories of Content Views/Composite Content Views which
+            have no name attribute defined
+          ansible.builtin.debug:
+            var: >-
+              __t_excluded_content_views |
+              selectattr(attribute='repositories', 'undefined') |
+              map(attribute='name') |
+              ansible.builtin.flatten
+
+          loop: '{{ __t_excluded_content_views }}'
+          loop_control:
+            loop_var: '__t_failed_content_view'
+            label: '{{ __t_failed_content_view.name }}'
+
+        - name: 'check_content_view_repo_attr_name | Fail with meaningful error message'
+          ansible.builtin.fail:
+            msg: >-
+              Above Repositories which have been extracted from Content Views/Composite Contents Views
+              via the attribute 'repositories', have not defined the 'name' attribute.
+              Each Repository should *always* defined the name attribute. Seeing this error indicates that the
+              Satellite API response has changed and this role is no longer functional as it is.
+...

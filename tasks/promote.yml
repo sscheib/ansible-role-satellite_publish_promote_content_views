@@ -1,0 +1,228 @@
+---
+- name: >-
+    promote | Include tasks to check that all Content Views/Composite Content Views have
+    the attribute latest_version defined
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_attr_latest_version.yml'
+
+- name: >-
+    promote | Include tasks to check that all Content Views/Composite Content Views have
+    the attribute latest_version populated
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_attr_latest_version_populated.yml'
+
+# We need to do this as otherwise the previous __t_content_view_versions, which might at this point have been
+# used for Content View versions, would simply be extended for the Composite Content View versions
+- name: 'promote | Set fact: Ensure the list of versions of each Content View/Composite Content View used is reset'
+  ansible.builtin.set_fact:
+    __t_content_view_versions: []
+
+- name: 'promote | Promote the Content View/Composite Content View versions'
+  redhat.satellite.content_view_version:
+    username: >-
+      {{
+        _satellite_username
+        if _satellite_username is defined and _satellite_username != ''
+        else
+        omit
+      }}
+    password: >-
+      {{
+        _satellite_password
+        if _satellite_password is defined and _satellite_password != ''
+        else
+        omit
+      }}
+    server_url: >-
+      {{
+        _satellite_server_url
+        if _satellite_server_url is defined and _satellite_server_url != ''
+        else
+        omit
+      }}
+    validate_certs: >-
+      {{
+        _satellite_validate_certs
+        if _satellite_validate_certs is defined and _satellite_validate_certs | string != ''
+        and _satellite_validate_certs != None
+        else
+        omit
+      }}
+    organization: '{{ _satellite_organization }}'
+    content_view: '{{ __t_content_view.name }}'
+    state: 'present'
+    description: '{{ __t_description }}'
+    version: '{{ __t_content_view.latest_version }}'
+    # select the matching (Composite) Content view and check if the
+    # respective attribute is defined: If yes, pass it to the module,
+    # otherwise omit the parameter
+    force_promote: >-
+      {{
+        (
+          _satellite_content_views |
+          selectattr('name', 'equalto', __t_content_view.name) |
+          selectattr('force_promote', 'defined') |
+          length > 0
+        ) | ansible.builtin.ternary (
+          _satellite_content_views |
+          selectattr('name', 'equalto', __t_content_view.name) |
+          selectattr('force_promote', 'defined') |
+          map(attribute='force_promote') |
+          ansible.builtin.flatten |
+          first,
+          omit
+        )
+      }}
+    force_yum_metadata_regeneration: >-
+      {{
+        (
+          _satellite_content_views |
+          selectattr('name', 'equalto', __t_content_view.name) |
+          selectattr('force_yum_metadata_regeneration', 'defined') |
+          length > 0
+        ) | ansible.builtin.ternary (
+          _satellite_content_views |
+          selectattr('name', 'equalto', __t_content_view.name) |
+          selectattr('force_yum_metadata_regeneration', 'defined') |
+          map(attribute='force_yum_metadata_regeneration') |
+          ansible.builtin.flatten |
+          first,
+          omit
+        )
+      }}
+    # This expression is basically the same as in 'publish_promote.yml', but a little easier.
+    # Since we know at this point (due to the when conditions) that the
+    # Content View/Composite Content View *has* Lifecycle Environments defined, it's just a
+    # matter of whether '__t_allowed_lifecycle_environments' is defined and what's the intersect
+    # of the (Composite) Content View Lifecycle Environments and '__t_allowed_lifecycle_environments'
+    # is.
+    # Should '__t_allowed_lifecycle_environments' be undefined, we'll pass in the (Composite) Content
+    # View Lifecycle Environments to get an intersect of exactly the Lifecycle Environments defined
+    # for the (Composite) Content View :)
+    lifecycle_environments: >-
+      {{
+         _satellite_content_views |
+        selectattr('name', 'equalto', __t_content_view.name) |
+        map(attribute='lifecycle_environments') |
+        ansible.builtin.flatten |
+        ansible.builtin.intersect(
+          (
+            __t_allowed_lifecycle_environments is defined
+            and __t_allowed_lifecycle_environments | length > 0
+          ) | ansible.builtin.ternary(
+            __t_allowed_lifecycle_environments,
+            _satellite_content_views |
+            selectattr('name', 'equalto', __t_content_view.name) |
+            map(attribute='lifecycle_environments') |
+            ansible.builtin.flatten
+          )
+        )
+      }}
+  # This one is again a little bit complex, unfortunately.
+  #
+  # All of the following conditions need to be met for the task to fire:
+  #
+  # 1. The currently processed (Composite) Content View needs to have at least one Lifecycle Environment defined.
+  #    Otherwise the promotion wouldn't make any sense.
+  #
+  # 2. If __t_allowed_lifecycle_environments, we make sure to only include Lifecycle Environments which are
+  #    defined in __t_allowed_lifecycle_environments and in the (Composite) Content View itself (intersect).
+  #    Eventually, we evaluate whether the list of the Lifecycle Environments contains at least one element.
+  #
+  #    If __t_allowed_lifecycle_environments is not defined, we'll simply take all Lifecycle Environments the
+  #    (Composite) Content View has defined and eventually evaluate if the Lifecycle Environments contains
+  #    at least one element (which it will at this point).
+  #    I won't bore you again with all details. If you are interested how this part of the expression below is exactly
+  #    crafted, check 'publish_promote.yml' where I describe it in all details.
+  #
+  #
+  when:
+    - >-
+      _satellite_content_views |
+      selectattr('name', 'equalto', __t_content_view.name) |
+      selectattr('lifecycle_environments', 'defined') |
+      length > 0
+
+    - >-
+      _satellite_content_views |
+      selectattr('name', 'equalto', __t_content_view.name) |
+      selectattr('lifecycle_environments', 'defined') |
+      map(attribute='lifecycle_environments') |
+      ansible.builtin.flatten |
+      ansible.builtin.intersect(
+        (
+          __t_allowed_lifecycle_environments is defined
+          and __t_allowed_lifecycle_environments | default([]) != None
+          and __t_allowed_lifecycle_environments | default([]) | length > 0
+        ) | ternary(
+          __t_allowed_lifecycle_environments | default([]),
+          _satellite_content_views |
+          selectattr('name', 'equalto', __t_content_view.name) |
+          selectattr('lifecycle_environments', 'defined') |
+          map(attribute='lifecycle_environments') |
+          ansible.builtin.flatten
+        )
+      ) | length > 0
+  # we track the change flag on the async task
+  changed_when: false
+  async: '{{ _sat_async_max_time }}'
+  poll: '{{ _sat_async_poll_time }}'
+  register: '__t_async_content_view_promote'
+  loop: '{{ __t_filtered_content_views }}'
+  loop_control:
+    loop_var: '__t_content_view'
+    label: '{{ __t_content_view.name }}'
+
+- name: 'promote | Wait for the Content View/Composite Content View promote to finish'
+  ansible.builtin.async_status:
+    jid: '{{ __t_promote_job.ansible_job_id }}'
+  until: '__t_async_result_content_view_promote.finished'
+  retries: '{{ _sat_async_retries }}'
+  delay: '{{ _sat_async_check_delay }}'
+  register: '__t_async_result_content_view_promote'
+  loop: '{{ __t_async_content_view_promote.results }}'
+  loop_control:
+    loop_var: '__t_promote_job'
+    label: '{{ __t_promote_job.__t_content_view.name }}'
+  when:
+    - '__t_promote_job.ansible_job_id is defined'
+    - "__t_promote_job.ansible_job_id != ''"
+
+- name: 'promote | Block: Handle collecting of Content Views for the summary'
+  when:
+    - '_sat_show_summary is defined'
+    - '_sat_show_summary'
+  block:
+
+    - name: 'promote | Collect changed Content Views'
+      ansible.builtin.set_fact:
+        __t_changed_content_views: >-
+          {{
+            __t_changed_content_views | default([]) + [
+              __t_async_result_content_view_promote.results |
+              selectattr('changed', 'defined') |
+              selectattr('changed', '==', true) |
+              selectattr('__t_promote_job.__t_content_view.name', 'defined') |
+              map(attribute='__t_promote_job.__t_content_view.name')
+            ] | ansible.builtin.flatten
+          }}
+      when: >-
+        __t_is_composite is not defined
+        or not __t_is_composite
+
+    - name: 'promote | Collect changed Composite Content Views'
+      ansible.builtin.set_fact:
+        __t_changed_composite_content_views: >-
+          {{
+            __t_changed_composite_content_views | default([]) + [
+              __t_async_result_content_view_promote.results |
+              selectattr('changed', 'defined') |
+              selectattr('changed', '==', true) |
+              selectattr('__t_promote_job.__t_content_view.name', 'defined') |
+              map(attribute='__t_promote_job.__t_content_view.name')
+            ] | ansible.builtin.flatten
+          }}
+      when:
+        - '__t_is_composite is defined'
+        - '__t_is_composite'
+...

@@ -1,0 +1,135 @@
+---
+- name: 'check_content_view_no_unknown | Include tasks to retrieve all Content Views and Composite Content Views'
+  ansible.builtin.include_tasks:
+    file: 'content_view_retrieval.yml'
+  vars:
+    __t_search_string: 'name != "Default Organization View"'
+    # search string for redhat.satellite.resource_info
+    #
+    # NOTE: it is important to keep the inner quotes as double quotes ("),
+    # as otherwise Satellite will *not* find *any* Content Views
+
+- name: 'check_content_view_no_unknown | Include tasks to ensure that all Content Views define the name attribute'
+  ansible.builtin.include_tasks:
+    file: 'check_content_view_attr_name.yml'
+
+- name: 'check_content_view_no_unknown | Include tasks to exclude Composite Content Views'
+  ansible.builtin.include_tasks:
+    file: 'content_view_exclusion.yml'
+  vars:
+    __t_reject_content_views: >-
+      {{
+        _sat_excluded_content_views | default([]) +
+        _sat_excluded_composite_content_views | default([]) |
+        ansible.builtin.flatten
+      }}
+
+# below task is necessary to account for (Composite) Content Views which are excluded (via _sat_excluded_content_views
+# or _sat_excluded_composite_content_views) or have the attribute patch_day_exclude: true defined
+- name: >-
+    check_content_view_no_unknown | Exclude Content Views/Composite Content Views from defined Content Views/Composite
+    Content Views results which are excluded from any activity
+  ansible.builtin.set_fact:
+    # we first check if __t_reject_content_views is defined and contains elements
+    #
+    # if __t_reject_content_views contains elements:
+    # - reject any (Composite) Content Views which are excluded via __t_reject_content_views
+    # - reject any (Composite) Content Views which have specified 'patch_day_exclude: true' in their definition
+    #
+    # If __t_excluded_content_views does not contain elements:
+    # - reject any (Composite) Content Views which have specified 'patch_day_exclude: true' in their definition
+    __t_content_views_unknown_check: >-
+      {{
+        (
+          __t_reject_content_views is defined
+          and __t_reject_content_views != None
+          and __t_reject_content_views | length > 0
+        ) | ansible.builtin.ternary(
+
+          _satellite_content_views |
+          rejectattr('name', 'in', __t_reject_content_views) |
+          rejectattr('name', 'in',
+            _satellite_content_views |
+            selectattr('patch_day_exclude', 'defined') |
+            selectattr('patch_day_exclude', '==', true) |
+            map(attribute='name')
+          ),
+
+          _satellite_content_views |
+          rejectattr('name', 'in',
+            _satellite_content_views |
+            selectattr('patch_day_exclude', 'defined') |
+            selectattr('patch_day_exclude', '==', true) |
+            map(attribute='name')
+          )
+        )
+      }}
+  vars:
+    # we defined __t_reject_content_views by combining both _sat_excluded_content_views
+    # and _sat_excluded_composite_content_views (if defined)
+    __t_reject_content_views: >-
+      {{
+        _sat_excluded_content_views | default([]) +
+        _sat_excluded_composite_content_views | default([]) |
+        ansible.builtin.flatten
+      }}
+
+- name: 'check_content_view_no_unknown | Debug: __t_content_views_unknown_check'
+  ansible.builtin.debug:
+    var: '__t_content_views_unknown_check'
+    verbosity: 1
+
+- name: >-
+    check_content_view_no_unknown | Block: Handle checking that all Content Views/Composite Content are known
+  block:
+
+    - name: >-
+        check_content_view_no_unknown | Ensure all Content Views/Composite Content Views are known to Satellite
+      ansible.builtin.assert:
+        that:
+          # Content View/Composite Content View is known to Satellite
+          - >-
+            __t_excluded_content_views |
+            selectattr('name', '==', __t_content_view.name) |
+            length == 1
+
+        success_msg: 'All Content Views/Composite Content Views are known to Satellite'
+        fail_msg: 'One or more Content View/Composite Content View is not known to Satellite'
+        quiet: '{{ _sat_quiet_assert }}'
+      register: '__t_has_unknown_content_views'
+      loop: '{{ __t_content_views_unknown_check }}'
+      loop_control:
+        loop_var: '__t_content_view'
+        label: '{{ __t_content_view.name }}'
+
+  always:
+
+    - name: 'check_content_view_no_unknown | Block: Handle error case'
+      when:
+        - '__t_has_unknown_content_views.failed is defined'
+        - '__t_has_unknown_content_views.failed'
+      block:
+
+        - name: >-
+            check_content_view_no_unknown | List all Content Views/Composite Content Views which
+            are not known to Satellite
+          ansible.builtin.debug:
+            var: '__t_content_view'
+
+          loop: '{{ __t_content_views_unknown_check }}'
+          loop_control:
+            loop_var: '__t_content_view'
+            label: '{{ __t_content_view.name }}'
+          when: >-
+            __t_excluded_content_views |
+            selectattr('name', '==', __t_content_view.name) |
+            length != 1
+
+        - name: 'check_content_view_no_unknown | Fail with meaningful error message'
+          ansible.builtin.fail:
+            msg: >-
+              Above Content Views/Composite Contents Views are not known to Satellite.
+              This likely means you haven't created the Content Views/Composite Content Views
+              listed above, or you haven't updated your definition of the Content Views/Composite
+              Content Views in satellite_content_views.
+...

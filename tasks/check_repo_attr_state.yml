@@ -1,0 +1,45 @@
+---
+- name: 'check_repo_attr_state | Block: Handle checking for the state attribute on Repositories'
+  block:
+
+    - name: >-
+        check_repo_attr_state | Ensure that all Repositories included in Content Views/Composite Content Views
+        have the Repository synchronization state attribute defined
+      ansible.builtin.assert:
+        that:
+          - >-
+            __t_filtered_repositories |
+            selectattr('last_sync.state', 'undefined') |
+            length == 0
+
+        success_msg: 'All Repositories have defined the Repository synchronization state attribute'
+        fail_msg: >-
+          Found at least one Repository included in at least one Content View/Composite Content View that does not
+          have defined the Repository synchronization state attribute
+        quiet: '{{ _sat_quiet_assert }}'
+      register: '__t_has_no_state_defined'
+
+  always:
+
+    - name: 'check_repo_attr_state | Block: Handle error case'
+      when:
+        - '__t_has_no_state_defined.failed is defined'
+        - '__t_has_no_state_defined.failed'
+      block:
+
+        - name: >-
+            check_repo_attr_state | List all Repositories that do not have defined the Repository
+            synchronization state attribute
+          ansible.builtin.debug:
+            var: >-
+              __t_filtered_repositories |
+              selectattr('last_sync.state', 'undefined') |
+              map(attribute='name')
+
+        - name: 'check_repo_attr_state | Fail with meaningful error message'
+          ansible.builtin.fail:
+            msg: >
+              One or more Repositories included in the Content Views/Composite Contents views have not defined
+              the 'state' attribute, which indicates the Repository was never synchronized. Please synchronize the
+              above listed Repositories and re-run this role.
+...

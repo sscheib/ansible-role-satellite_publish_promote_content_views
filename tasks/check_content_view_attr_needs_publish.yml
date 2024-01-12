@@ -1,0 +1,47 @@
+---
+- name: >-
+    check_content_view_attr_needs_publish | Block: Handle Content Views/Composite Content Views which have do
+    not define the attribute needs_publish
+  block:
+
+    - name: >-
+        check_content_view_attr_needs_publish | Ensure that all Content Views/Composite Content Views have the
+        attribute 'needs_publish' defined
+      ansible.builtin.assert:
+        that:
+          # 'needs_publish' is defined for all elements
+          # even if a (Composite) Content View does not need publishing, this attribute should be defined
+          - >-
+            __t_excluded_content_views |
+            selectattr('needs_publish', 'undefined') |
+            length == 0
+
+        success_msg: 'All Content Views/Composite Content Views have the attribute needs_publish defined'
+        fail_msg: >-
+          At least one Content View/Composite Content View does not have the attribute needs_publish defined
+        quiet: '{{ _sat_quiet_assert }}'
+      register: '__t_has_needs_publish_defined'
+
+  always:
+
+    - name: 'check_content_view_attr_needs_publish | Block: Handle error case'
+      when:
+        - '__t_has_needs_publish_defined.failed is defined'
+        - '__t_has_needs_publish_defined.failed'
+      block:
+
+        - name: >-
+            check_content_view_attr_needs_publish | List all Content Views/Composite Content Views
+            without attribute needs_publish
+          ansible.builtin.debug:
+            var: >-
+              __t_excluded_content_views |
+              selectattr('needs_publish', 'undefined')
+
+        - name: 'check_content_view_attr_needs_publish | Fail with meaningful error message'
+          ansible.builtin.fail:
+            msg: >-
+              Above Content Views/Composite Contents Views have not defined the 'needs_publish' attribute.
+              This attribute should *always* be defined, even when the Content View/Composite Content View does not
+              need to be published.
+...
