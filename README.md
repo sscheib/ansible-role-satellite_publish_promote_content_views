@@ -166,7 +166,7 @@ Both formats are, in my humble opinion, sub par.
 
 *Typically*, when there is a need to identify a list element by name, the attribute `name` is used - not something that describes the type of object that is defined. Especially, considering
 that another role of the same collections ([`redhat.satellite.content_views`](https://console.redhat.com/ansible/automation-hub/repo/published/redhat/satellite/content/role/content_views/)
-or [`theforeman.foreman.content_views`](https://github.com/theforeman/foreman-ansible-modules/tree/develop/roles/content_views) is *requiring* the `name` attribute.
+or [`theforeman.foreman.content_views`](https://github.com/theforeman/foreman-ansible-modules/tree/develop/roles/content_views)) is *requiring* the `name` attribute.
 
 Don't get me wrong, I am not saying that it is *absolutely uncommon* to not have the `name` attribute defined, but I'd argue that this is somewhat of a common practice to use `name` over
 anything else when it comes to identifying objects by *name*.
@@ -187,9 +187,10 @@ satellite_content_views:
 - etc.
 ```
 
-This has two benefits:
+This has three benefits:
 - You can use the very same definition of Content Views/Composite Content Views as for the role ([`redhat.satellite.content_views`](https://console.redhat.com/ansible/automation-hub/repo/published/redhat/satellite/content/role/content_views/)
-- You avoid the conversion of this role which 
+- You can use the very same definition of Content Views/Composite Content Views for the role `redhat.satellite.content_views`
+- You avoid the conversion of this role which greatly improves the performance 
 
 
 Role Variables
