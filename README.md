@@ -1,3 +1,5 @@
+[![ansible-lint](https://github.com/sscheib/ansible-role-satellite_publish_promote_content_views/actions/workflows/ansible-lint.yml/badge.svg)](https://github.com/sscheib/ansible-role-satellite_publish_promote_content_views/actions/workflows/ansible-lint.yml) [![Publish latest release to Ansible Galaxy](https://github.com/sscheib/ansible-role-satellite_publish_promote_content_views/actions/workflows/ansible-galaxy.yml/badge.svg)](https://github.com/sscheib/ansible-role-satellite_publish_promote_content_views/actions/workflows/ansible-galaxy.yml)
+
 satellite_content_view_version_publish_promote
 =========
 
