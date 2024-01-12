@@ -187,9 +187,8 @@ satellite_content_views:
 - etc.
 ```
 
-This has three benefits:
-- You can use the very same definition of Content Views/Composite Content Views as for the role ([`redhat.satellite.content_views`](https://console.redhat.com/ansible/automation-hub/repo/published/redhat/satellite/content/role/content_views/)
-- You can use the very same definition of Content Views/Composite Content Views for the role `redhat.satellite.content_views`
+This has two benefits:
+- You can use the very same definition of Content Views/Composite Content Views as for the role ([`redhat.satellite.content_views`](https://console.redhat.com/ansible/automation-hub/repo/published/redhat/satellite/content/role/content_views/))
 - You avoid the conversion of this role which greatly improves the performance 
 
 
