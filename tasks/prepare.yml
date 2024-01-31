@@ -1,5 +1,7 @@
 ---
-- name: 'prepare | Set fact: __t_search_string, __t_description, __t_allowed_lifecycle_environments'
+- name: >-
+    prepare | Set fact: __t_search_string, __t_description, __t_allowed_lifecycle_environments,
+    __t_has_content_views_left
   ansible.builtin.set_fact:
     # search string for redhat.satellite.resource_info
     #
@@ -43,6 +45,11 @@
         else
         _sat_excluded_content_views | default([])
       }}
+
+    # reset/set an initial value of false - this will be used later on to check
+    # if any Content Views/Composite Content Views are left to be processed after
+    # filtering and/or excluding
+    __t_has_content_views_left: false
 
 # this is done to ensure that the included Content Views are not kept during
 # re-including the tasks in this file
@@ -125,6 +132,25 @@
     var: '__t_filtered_content_views'
     verbosity: 2
 
+# this check was introduced to prevent execution if all Content Views/Composite Content Views have been
+# excluded and/or filtered
+#
+# we are setting this variable to be able to check on it in the next block
+# ('Block: Handle retrieval and validation of Repositories')
+#
+# It is not possible to use the same condition for the next block than for this set_fact invocation
+# as within the next block (and all of its nested blocks and includes) the condition of the original
+# block ('Block: Handle retrieval and validation of Repositories') will *also taken into consideration*
+#
+# Unfortunately, it is required to retrieve the objects from Satellite again (as synchronizing the Repositories
+# will change the objects) and therefore a reset of __t_filtered_content_views is required. When having
+# '__t_filtered_content_views | length > 0' as condition for the block, it causes *all* subsequent tasks
+# within the block (so all tasks included directly or indirectly [include_tasks]) to be skipped
+- name: 'prepare | Set fact: Copy __t_filtered_content_views'
+  ansible.builtin.set_fact:
+    __t_has_content_views_left: true
+  when: '__t_filtered_content_views | length > 0'
+
 - name: 'prepare | Block: Handle retrieval and validation of Repositories'
   # retrieving and validatating Repositories makes no sense when promotion only is asked
   # for and any of the Repository actions/validations are enabled.
@@ -132,7 +158,8 @@
   # further, Repository based publishing is irrelevant for Composite Content Views. For that, there is
   # Component based publishing
   when:
-    - '__t_filtered_content_views | length > 0'
+    - '__t_has_content_views_left is defined'
+    - '__t_has_content_views_left'
     - '__t_repository_action_required is defined'
     - '__t_repository_action_required'
     - >-
@@ -170,6 +197,35 @@
         - name: 'prepare | Include tasks to filter Repositories'
           ansible.builtin.include_tasks:
             file: 'repository_filtering.yml'
+
+        # we also need to gather the Content Views/Composites Content Views again and
+        # apply the same filtering again, as the objects have changed
+        - name: 'prepare | Include tasks to retrieve all Content Views/Composite Content Views from the Satellite API'
+          ansible.builtin.include_tasks:
+            file: 'content_view_retrieval.yml'
+
+        - name: >-
+            prepare | Include tasks to check if all Content Views/Composite Content Views define the name attribute
+          ansible.builtin.include_tasks:
+            file: 'check_content_view_attr_name.yml'
+
+        - name: 'prepare | Include tasks to exclude Content Views/Composite Content Views'
+          ansible.builtin.include_tasks:
+            file: 'content_view_exclusion.yml'
+
+        - name: 'prepare | Include tasks to handle Content Views/Composite Content Repositories'
+          ansible.builtin.include_tasks:
+            file: 'content_view_repositories.yml'
+
+        - name: 'prepare | Debug: Filterered Content Views (names only)'
+          ansible.builtin.debug:
+            var: "__t_filtered_content_views | map(attribute='name')"
+            verbosity: 1
+
+        - name: 'prepare | Debug: Filterered Content Views'
+          ansible.builtin.debug:
+            var: '__t_filtered_content_views'
+            verbosity: 2
 
     # doing this after excluding Repositories, as a user might exclude a problematic Repository on purpose
     - name: 'prepare | Include tasks to validate the Satellite API response'
@@ -212,12 +268,29 @@
     - name: 'prepare | Include tasks to publish and optionally promote Content Views/Composite Content Views'
       ansible.builtin.include_tasks:
         file: 'publish_promote.yml'
+      # only do a publish and optional promote when
+      # - there are Content Views/Composite Content Views to publish
+      #  (one of the below conditions need to match)
+      # - we are not running in a Composite Content View context (determined by __t_is_composite)
+      # OR
+      # - when we are running in a Composite Content View context, it is not asked for Component based
+      #   publishing (which would have been done in a block above)
       when:
         - '__t_content_views_publish_required is defined'
         - '__t_content_views_publish_required | length > 0'
         - >-
-          _sat_publish_based_on_component is not defined
-          or not _sat_publish_based_on_component
+          (
+            __t_is_composite is not defined or
+            not __t_is_composite
+          ) or (
+            (
+              __t_is_composite is defined
+              and __t_is_composite
+            ) and (
+              _sat_publish_based_on_component is not defined
+              or not _sat_publish_based_on_component
+            )
+          )
 
 - name: 'prepare | Include tasks to promote Content Views/Composite Content Views'
   ansible.builtin.include_tasks:
