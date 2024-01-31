@@ -29,7 +29,10 @@
                 (
                   __t_item.0.last_published |
                   ansible.builtin.to_datetime(format=_sat_api_timestamp_format)
-                ).strftime('%s'),
+                ).strftime('%s')
+                if __t_item.0.last_published != None and __t_item.0.last_published != ''
+                else
+                None,
               'last_sync':
                 __t_filtered_repositories |
                 selectattr('name', '==', __t_item.1.name) |
