@@ -49,13 +49,12 @@
     # empty unused variable again
     __t_content_views: {}
 
-- name: 'content_view_exclusion | Debug: __t_excluded_content_views (name only)'
+- name: "content_view_exclusion | Debug: __t_excluded_content_views (name only)"
   ansible.builtin.debug:
-    var: "__t_excluded_content_views | map(attribute='name')"
+    var: __t_excluded_content_views | map(attribute='name')
     verbosity: 1
 
-- name: 'content_view_exclusion | Debug: __t_excluded_content_views'
+- name: "content_view_exclusion | Debug: __t_excluded_content_views"
   ansible.builtin.debug:
-    var: "__t_excluded_content_views | map(attribute='name')"
+    var: __t_excluded_content_views | map(attribute='name')
     verbosity: 2
-...

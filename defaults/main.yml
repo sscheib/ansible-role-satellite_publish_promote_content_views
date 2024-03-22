@@ -47,7 +47,7 @@ _def_sat_check_successful_repository_synchronization: false
 # -> 'content_view' for Content Views
 # -> 'composite_content_view' for Composite Content Views
 # -> 'both' to process both Content Views and Composite Content Views
-_def_sat_content_view_kinds: 'both'
+_def_sat_content_view_kinds: both
 
 # whether to synchronize Repositories included in any Content View/Composite Content View prior to
 # publishing a new version
@@ -57,7 +57,7 @@ _def_sat_synchronize_repositories: false
 # format in which the timestamps are represented in the Satellite API.
 # Usually, this doesn't need to be touched - but just in case, it's here.
 # Be sure you know what you are doing before touching this variable. It is only validated whether it is a string.
-_def_sat_api_timestamp_format: '%Y-%m-%d %H:%M:%S %Z'
+_def_sat_api_timestamp_format: "%Y-%m-%d %H:%M:%S %Z"
 
 # whether to check if all Content Views/Composite Content Views defined
 # in satellite_content_views are known to Satellite
@@ -115,5 +115,4 @@ _def_sat_convert_yaml_use_custom_yaml_filter: true
 
 # whether to put a specific key and value to the top of a dictionary representing a Content View/Composite Content View
 # this key needs to exists - otherwise the custom filter will error out!
-_def_sat_convert_yaml_top_key: 'name'
-...
+_def_sat_convert_yaml_top_key: name

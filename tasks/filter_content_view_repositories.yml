@@ -1,5 +1,5 @@
 ---
-- name: 'filter_content_view_repositories | Filter excluded Repositories from the Content Views/Composite Content Views'
+- name: filter_content_view_repositories | Filter excluded Repositories from the Content Views/Composite Content Views
   ansible.builtin.set_fact:
     # below expression looks way more complex than it actually is
     #
@@ -69,5 +69,4 @@
       }}
   loop: "{{ __t_excluded_content_views | map(attribute='name') }}"
   loop_control:
-    loop_var: '__t_content_view'
-...
+    loop_var: __t_content_view

@@ -1,8 +1,7 @@
 ---
-- name: 'check_repo_attr_last_sync | Block: Handle checking for the last_sync attribute'
+- name: "check_repo_attr_last_sync | Block: Handle checking for the last_sync attribute"
   block:
-
-    - name: 'check_repo_attr_last_sync | Ensure the Satellite API response for querying the Repositories is as expected'
+    - name: check_repo_attr_last_sync | Ensure the Satellite API response for querying the Repositories is as expected
       ansible.builtin.assert:
         that:
           # 'last_sync' is defined for all Repositories
@@ -11,19 +10,17 @@
             selectattr('last_sync', 'undefined') |
             length == 0
 
-        success_msg: 'Returned API response from the Satellite API is as expected'
-        fail_msg: 'Returned API response from the Satellite API is not as expected'
-        quiet: '{{ _sat_quiet_assert }}'
-      register: '__t_has_undefined_last_sync'
+        success_msg: Returned API response from the Satellite API is as expected
+        fail_msg: Returned API response from the Satellite API is not as expected
+        quiet: "{{ _sat_quiet_assert }}"
+      register: __t_has_undefined_last_sync
 
   always:
-
-    - name: 'check_repo_attr_last_sync | Block: Handle error case'
+    - name: "check_repo_attr_last_sync | Block: Handle error case"
       when:
-        - '__t_has_undefined_last_sync.failed is defined'
-        - '__t_has_undefined_last_sync.failed'
+        - __t_has_undefined_last_sync.failed is defined
+        - __t_has_undefined_last_sync.failed
       block:
-
         - name: >-
             check_repo_attr_last_sync | List all Repositories that do not have defined the Repository
             synchronization last_sync attribute
@@ -33,10 +30,9 @@
               selectattr('last_sync', 'undefined') |
               map(attribute='name')
 
-        - name: 'check_repo_attr_last_sync | Fail with meaningful error message'
+        - name: check_repo_attr_last_sync | Fail with meaningful error message
           ansible.builtin.fail:
             msg: >-
               Above Repositories included in the Content Views/Composite Contents Views have not defined
               the 'last_sync' attribute, which is not expected. Repositories should *always* include this
               attribute (either empty (= None/null) or populated.
-...

@@ -3,64 +3,62 @@
     repository_validation | Include tasks to validate whether included Repositories have been
     synchronized at least once
   ansible.builtin.include_tasks:
-    file: 'check_repo_synchronized_once.yml'
+    file: check_repo_synchronized_once.yml
   when:
-    - '_sat_check_unsynchronized_repositories is defined'
-    - '_sat_check_unsynchronized_repositories'
+    - _sat_check_unsynchronized_repositories is defined
+    - _sat_check_unsynchronized_repositories
 
 - name: >-
     repository_validation | Include tasks to ensure that all Repositories included in the (Composite) Content Views
     have the Repository synchronization state attribute defined
   ansible.builtin.include_tasks:
-    file: 'check_repo_attr_state.yml'
+    file: check_repo_attr_state.yml
   when:
-    - '_sat_check_synchronizing_repositories is defined'
-    - '_sat_check_synchronizing_repositories'
+    - _sat_check_synchronizing_repositories is defined
+    - _sat_check_synchronizing_repositories
 
-- name: 'repository_validation | Include tasks to handle currently synchronizing Repositories'
+- name: repository_validation | Include tasks to handle currently synchronizing Repositories
   ansible.builtin.include_tasks:
-    file: 'check_repo_sync.yml'
+    file: check_repo_sync.yml
   when:
-    - '_sat_wait_for_repository_synchronization is defined'
-    - '_sat_wait_for_repository_synchronization'
+    - _sat_wait_for_repository_synchronization is defined
+    - _sat_wait_for_repository_synchronization
 
 - name: >
     repository_validation | Include tasks to validate whether included Repositories finished their
     last synchronization successfully
   ansible.builtin.include_tasks:
-    file: 'check_repo_last_sync_successful.yml'
+    file: check_repo_last_sync_successful.yml
   when:
-    - '_sat_check_successful_repository_synchronization is defined'
-    - '_sat_check_successful_repository_synchronization'
+    - _sat_check_successful_repository_synchronization is defined
+    - _sat_check_successful_repository_synchronization
 
-- name: 'repository_validation | Handle prerequisites for publishing based on Repository sync date'
+- name: repository_validation | Handle prerequisites for publishing based on Repository sync date
   when:
-    - '_sat_publish_based_on_repository is defined'
-    - '_sat_publish_based_on_repository'
+    - _sat_publish_based_on_repository is defined
+    - _sat_publish_based_on_repository
     - >-
       __t_is_composite is not defined or
       not __t_is_composite
   block:
-
     - name: >
         repository_validation | Include tasks to validate whether included Repositories define the
         attribute 'last_sync.ended_at'
       ansible.builtin.include_tasks:
-        file: 'check_repo_attr_last_sync_ended_at.yml'
+        file: check_repo_attr_last_sync_ended_at.yml
 
     - name: >
         repository_validation | Include tasks to validate whether included Repositories have a correct
         timestamp set for the attribute 'last_sync.ended_at'
       ansible.builtin.include_tasks:
-        file: 'check_repo_timestamp_attr_last_sync_endet_at.yml'
+        file: check_repo_timestamp_attr_last_sync_endet_at.yml
 
     # this needs to be done - once again - to ensure that a Content Views from a previous
     # include of these tasks are not present in the list
-    - name: 'repository_validation | Ensure list of Content Views/Composite Content Views to publish is reset'
+    - name: repository_validation | Ensure list of Content Views/Composite Content Views to publish is reset
       ansible.builtin.set_fact:
         __t_content_views_publish_required: []
 
-    - name: 'repository_validation | Include tasks to collect Content Views that require publishing'
+    - name: repository_validation | Include tasks to collect Content Views that require publishing
       ansible.builtin.include_tasks:
-        file: 'collect_content_views.yml'
-...
+        file: collect_content_views.yml

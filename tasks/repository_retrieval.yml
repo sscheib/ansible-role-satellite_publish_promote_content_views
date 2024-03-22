@@ -1,5 +1,5 @@
 ---
-- name: 'repository_retrieval | Retrieve all Repositories'
+- name: repository_retrieval | Retrieve all Repositories
   redhat.satellite.resource_info:
     username: >-
       {{
@@ -30,14 +30,13 @@
         else
         omit
       }}
-    organization: '{{ _satellite_organization }}'
-    resource: 'repositories'
-    search: 'content_type = yum'  # only look for RPM based repositories
-  register: '__t_repositories'
+    organization: "{{ _satellite_organization }}"
+    resource: repositories
+    search: content_type = yum # only look for RPM based repositories
+  register: __t_repositories
 
 - name: >-
     repository_retrieval | Include tasks to ensure all Repositories received from the Satellite API
     have a name attribute set
   ansible.builtin.include_tasks:
-    file: 'check_repo_attr_name.yml'
-...
+    file: check_repo_attr_name.yml

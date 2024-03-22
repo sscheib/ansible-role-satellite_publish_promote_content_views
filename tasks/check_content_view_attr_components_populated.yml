@@ -3,49 +3,45 @@
     check_content_view_attr_components_populated | Block: Handle Composite
     Content Views with an empty components attribute
   block:
-
     - name: >-
         check_content_view_attr_components_populated | Ensure Composite Content Views have
         the components attribute populated
       ansible.builtin.assert:
         that:
           # 'components' contains elements
-          - '__t_content_view.components | length > 0'
+          - __t_content_view.components | length > 0
 
-        success_msg: 'All Composite Content Views have the components attribute populated'
-        fail_msg: 'One or more Composite Content Views have the components attribute not populated'
-        quiet: '{{ _sat_quiet_assert }}'
-      register: '__t_has_content_view_empty_components'
+        success_msg: All Composite Content Views have the components attribute populated
+        fail_msg: One or more Composite Content Views have the components attribute not populated
+        quiet: "{{ _sat_quiet_assert }}"
+      register: __t_has_content_view_empty_components
       loop: "{{ __t_excluded_content_views }}"
       loop_control:
-        loop_var: '__t_content_view'
-        label: '{{ __t_content_view.name }}'
+        loop_var: __t_content_view
+        label: "{{ __t_content_view.name }}"
 
   always:
-
-    - name: 'check_content_view_attr_components_populated | Block: Handle error case'
+    - name: "check_content_view_attr_components_populated | Block: Handle error case"
       when:
-        - '__t_has_content_view_empty_components.failed is defined'
-        - '__t_has_content_view_empty_components.failed'
+        - __t_has_content_view_empty_components.failed is defined
+        - __t_has_content_view_empty_components.failed
       block:
-
         - name: >-
             check_content_view_attr_components_populated | List all Composite Content Views without
             populated attribute components
           ansible.builtin.debug:
-            var: '__t_content_view.name'
+            var: __t_content_view.name
 
           loop: "{{ __t_excluded_content_views }}"
           loop_control:
-            loop_var: '__t_content_view'
-            label: '{{ __t_content_view.name }}'
-          when: '__t_content_view.components | length == 0'
+            loop_var: __t_content_view
+            label: "{{ __t_content_view.name }}"
+          when: __t_content_view.components | length == 0
 
-        - name: 'check_content_view_attr_components_populated | Fail with meaningful error message'
+        - name: check_content_view_attr_components_populated | Fail with meaningful error message
           ansible.builtin.fail:
             msg: >-
               Above Composite Contents Views have not populated the 'components' attribute.
               This means that the Composite Content View does not contain any Content Views and it
               makes no sense to publish it. Please add Content Views to the Composite Content Views
               listed above, delete them or exclude them so that this role does not process them.
-...

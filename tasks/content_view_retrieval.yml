@@ -1,5 +1,5 @@
 ---
-- name: 'content_view_retrieval | Retrieve all Content Views/Composite Content Views'
+- name: content_view_retrieval | Retrieve all Content Views/Composite Content Views
   redhat.satellite.resource_info:
     username: >-
       {{
@@ -30,8 +30,7 @@
         else
         omit
       }}
-    organization: '{{ _satellite_organization }}'
-    resource: 'content_views'
-    search: '{{ __t_search_string }}'
-  register: '__t_content_views'
-...
+    organization: "{{ _satellite_organization }}"
+    resource: content_views
+    search: "{{ __t_search_string }}"
+  register: __t_content_views

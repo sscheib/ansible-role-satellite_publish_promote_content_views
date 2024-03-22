@@ -68,56 +68,55 @@
   #
   # If any of the two cases matches, we'll add the content view to __t_content_views_publish_required
   when: >-
-   (
-      (
-        __t_item.0.last_published == None
-      )
-      and
-      (
-        __t_item.0.name not in
-          __t_content_views_publish_required | default([]) |
-          map(attribute='name', default=[]) |
-          ansible.builtin.flatten
-      )
-    )
-    or
     (
-      (
-        __t_item.0.last_published != None
-      )
-      and
-      (
-        __t_content_views_publish_required | default([]) |
-        selectattr('name', '==', __t_item.0.name) | default([]) |
-        length == 0
-      )
-      and
-      (
-        (
-          __t_filtered_repositories |
-          selectattr('name', '==', __t_item.1.name) |
-          map(attribute='last_sync') |
-          ansible.builtin.flatten |
-          map(attribute='ended_at') |
-          ansible.builtin.flatten |
-          first |
-          ansible.builtin.to_datetime(format=_sat_api_timestamp_format)
-        ).strftime('%s') | int
-        >
-        (
-          __t_item.0.last_published |
-          ansible.builtin.to_datetime(format=_sat_api_timestamp_format)
-        ).strftime('%s') | int
-      )
-    )
+       (
+         __t_item.0.last_published == None
+       )
+       and
+       (
+         __t_item.0.name not in
+           __t_content_views_publish_required | default([]) |
+           map(attribute='name', default=[]) |
+           ansible.builtin.flatten
+       )
+     )
+     or
+     (
+       (
+         __t_item.0.last_published != None
+       )
+       and
+       (
+         __t_content_views_publish_required | default([]) |
+         selectattr('name', '==', __t_item.0.name) | default([]) |
+         length == 0
+       )
+       and
+       (
+         (
+           __t_filtered_repositories |
+           selectattr('name', '==', __t_item.1.name) |
+           map(attribute='last_sync') |
+           ansible.builtin.flatten |
+           map(attribute='ended_at') |
+           ansible.builtin.flatten |
+           first |
+           ansible.builtin.to_datetime(format=_sat_api_timestamp_format)
+         ).strftime('%s') | int
+         >
+         (
+           __t_item.0.last_published |
+           ansible.builtin.to_datetime(format=_sat_api_timestamp_format)
+         ).strftime('%s') | int
+       )
+     )
 
   loop: "{{ __t_filtered_content_views | ansible.builtin.subelements('repositories') }}"
   loop_control:
-    loop_var: '__t_item'
+    loop_var: __t_item
     label: "{{ __t_item.0.name ~ ' -> ' ~ __t_item.1.name }}"
 
-- name: 'collect_content_views | Debug: __t_content_views_publish_required'
+- name: "collect_content_views | Debug: __t_content_views_publish_required"
   ansible.builtin.debug:
-    var: '__t_content_views_publish_required'
+    var: __t_content_views_publish_required
     verbosity: 1
-...

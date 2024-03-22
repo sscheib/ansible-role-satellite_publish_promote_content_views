@@ -4,7 +4,7 @@
 #
 # it would have been easier just to pass in the Product and get all Repositories synchronized, but
 # this is done in case a user excludes a certain Repository, and doesn't want it to be synchronized
-- name: 'repository_synchronization | Set fact: Create Products to Repository relationship'
+- name: "repository_synchronization | Set fact: Create Products to Repository relationship"
   ansible.builtin.set_fact:
     __t_products_repositories: >-
       {{
@@ -21,14 +21,14 @@
       }}
   loop: "{{ __t_filtered_repositories | map(attribute='product.name') | unique }}"
   loop_control:
-    loop_var: '__t_product'
+    loop_var: __t_product
 
-- name: 'repository_synchronization | Debug: __t_products_repositories'
+- name: "repository_synchronization | Debug: __t_products_repositories"
   ansible.builtin.debug:
-    var: '__t_products_repositories'
+    var: __t_products_repositories
     verbosity: 1
 
-- name: 'repository_synchronization | Synchronize the Repositories included in any Content View/Composite Content View'
+- name: repository_synchronization | Synchronize the Repositories included in any Content View/Composite Content View
   redhat.satellite.repository_sync:
     username: >-
       {{
@@ -59,38 +59,38 @@
         else
         omit
       }}
-    organization: '{{ _satellite_organization }}'
-    product: '{{ __t_product.0.name }}'
-    repository: '{{ __t_product.1 }}'
-  async: '{{ _sat_async_max_time }}'
-  poll: '{{ _sat_async_poll_time }}'
-  register: '__t_async_repository_synchronization'
+    organization: "{{ _satellite_organization }}"
+    product: "{{ __t_product.0.name }}"
+    repository: "{{ __t_product.1 }}"
+  async: "{{ _sat_async_max_time }}"
+  poll: "{{ _sat_async_poll_time }}"
+  register: __t_async_repository_synchronization
   # unfortunately, the module repository_sync only accepts one Repository at a time, therefore
   # we need to iterate over all Repositories in conjuncting with the Product
   loop: "{{ __t_products_repositories | ansible.builtin.subelements('repositories') }}"
   loop_control:
-    loop_var: '__t_product'
+    loop_var: __t_product
     label: "{{ __t_product.0.name ~ ' -> ' ~ __t_product.1 }}"
   # skip Products with no Repositories
   when:
-    - '__t_product.0.repositories | length > 0'
+    - __t_product.0.repositories | length > 0
 
-- name: 'repository_synchronization | Wait for the Repositories to finish synchronizing'
+- name: repository_synchronization | Wait for the Repositories to finish synchronizing
   ansible.builtin.async_status:
-    jid: '{{ __t_sync_job.ansible_job_id }}'
-  until: '__t_async_result_repository_synchronization.finished'
-  retries: '{{ _sat_async_retries }}'
-  delay: '{{ _sat_async_check_delay }}'
-  register: '__t_async_result_repository_synchronization'
-  loop: '{{ __t_async_repository_synchronization.results }}'
+    jid: "{{ __t_sync_job.ansible_job_id }}"
+  until: __t_async_result_repository_synchronization.finished
+  retries: "{{ _sat_async_retries }}"
+  delay: "{{ _sat_async_check_delay }}"
+  register: __t_async_result_repository_synchronization
+  loop: "{{ __t_async_repository_synchronization.results }}"
   loop_control:
-    loop_var: '__t_sync_job'
+    loop_var: __t_sync_job
     label: "{{ __t_sync_job.__t_product.0.name ~ ' -> ' ~ __t_sync_job.__t_product.1 }}"
   when:
-    - '__t_sync_job.ansible_job_id is defined'
-    - "__t_sync_job.ansible_job_id != ''"
+    - __t_sync_job.ansible_job_id is defined
+    - __t_sync_job.ansible_job_id != ''
 
-- name: 'repository_synchronization | Collect changed Repositories'
+- name: repository_synchronization | Collect changed Repositories
   ansible.builtin.set_fact:
     __t_changed_repositories: >-
       {{
@@ -103,6 +103,5 @@
         ansible.builtin.unique
       }}
   when:
-    - '_sat_show_summary is defined'
-    - '_sat_show_summary'
-...
+    - _sat_show_summary is defined
+    - _sat_show_summary

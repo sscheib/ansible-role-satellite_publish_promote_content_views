@@ -1,9 +1,9 @@
 ---
-- name: 'dump_yaml | Include tasks to check if relevant variables are defined properly'
+- name: dump_yaml | Include tasks to check if relevant variables are defined properly
   ansible.builtin.include_tasks:
-    file: 'assert_convert.yml'
+    file: assert_convert.yml
 
-- name: 'dump_yaml | Dump the converted YAML: {{ _sat_convert_yaml_file }}'
+- name: "dump_yaml | Dump the converted YAML: {{ _sat_convert_yaml_file }}"
   ansible.builtin.copy:
     # dump _satellite_content_views either with list_of_dicts_to_indented_yaml
     # or to_nice_yaml depending on _sat_convert_yaml_use_custom_yaml_filter
@@ -30,8 +30,7 @@
             )
           )
       }}
-    dest: '{{ _sat_convert_yaml_file }}'
-    owner: '{{ ansible_user | default(omit) }}'
-    group: '{{ ansible_user | default(omit) }}'
-    mode: '0600'
-...
+    dest: "{{ _sat_convert_yaml_file }}"
+    owner: "{{ ansible_user | default(omit) }}"
+    group: "{{ ansible_user | default(omit) }}"
+    mode: "0600"

@@ -1,5 +1,5 @@
 ---
-- name: 'repository_filtering | Exclude Repositories from the results the Satellite API returned - if defined'
+- name: repository_filtering | Exclude Repositories from the results the Satellite API returned - if defined
   ansible.builtin.set_fact:
     # with this expression we filter out all excluded Repositories if _sat_excluded_repositories
     # is defined and contains any elements, otherwise we assign the content of __t_repositories.resources
@@ -22,7 +22,7 @@
 
 # if this task file is included once more, the list of filtered Repositories will be incorrect, as it just adds
 # items to the previous existing list
-- name: 'repository_filtering | Reset __t_filtered_repositories'
+- name: repository_filtering | Reset __t_filtered_repositories
   ansible.builtin.set_fact:
     __t_filtered_repositories: []
 
@@ -48,19 +48,17 @@
       __t_repository.name not in
       __t_filtered_repositories | default([]) |
       map(attribute='name', default=[])
-  loop: '{{ __t_repositories_excluded }}'
+  loop: "{{ __t_repositories_excluded }}"
   loop_control:
-    loop_var: '__t_repository'
-    label: '{{ __t_repository.name }}'
+    loop_var: __t_repository
+    label: "{{ __t_repository.name }}"
 
-- name: 'repository_filtering | Debug: Filterered Repositories (names only)'
+- name: "repository_filtering | Debug: Filterered Repositories (names only)"
   ansible.builtin.debug:
-    var: "__t_filtered_repositories | map(attribute='name')"
+    var: __t_filtered_repositories | map(attribute='name')
     verbosity: 1
 
-- name: 'repository_filtering | Debug: Filterered Repositories'
+- name: "repository_filtering | Debug: Filterered Repositories"
   ansible.builtin.debug:
-    var: '__t_filtered_repositories'
+    var: __t_filtered_repositories
     verbosity: 2
-
-...

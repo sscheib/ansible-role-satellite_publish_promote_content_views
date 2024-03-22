@@ -1,21 +1,20 @@
 ---
 galaxy_info:
-  role_name: 'satellite_content_view_version_publish_promote'
-  namespace: 'sscheib'
-  author: 'Steffen Scheib'
-  description: 'Publishes and optionally promotes Content View versions and Composite Content View versions.'
-  issue_tracker_url: 'https://github.com/sscheib/ansible-role-satellite_publish_promote_content_views/issues'
-  license: 'GPL-2.0-or-later'
-  min_ansible_version: '2.12'
+  role_name: satellite_content_view_version_publish_promote
+  namespace: sscheib
+  author: Steffen Scheib
+  description: Publishes and optionally promotes Content View versions and Composite Content View versions.
+  issue_tracker_url: https://github.com/sscheib/ansible-role-satellite_publish_promote_content_views/issues
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.12"
   platforms:
-    - name: 'EL'
+    - name: EL
       versions:
-        - '8'
+        - "8"
 
   galaxy_tags:
-    - 'rhel'
-    - 'katello'
-    - 'satellite'
+    - rhel
+    - katello
+    - satellite
 
 dependencies: []
-...
