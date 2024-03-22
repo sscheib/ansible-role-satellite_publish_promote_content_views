@@ -1,5 +1,5 @@
 ---
-- name: 'convert_legacy | Ensure the legacy format can be converted'
+- name: convert_legacy | Ensure the legacy format can be converted
   ansible.builtin.assert:
     that:
       - >-
@@ -13,13 +13,13 @@
           and __t_content_view is iterable
           and __t_content_view is not mapping
         )
-    quiet: '{{ _sat_quiet_assert | default(false) }}'
+    quiet: "{{ _sat_quiet_assert | default(false) }}"
   when: >-
     _sat_skip_legacy_assert is not defined
     or _sat_skip_legacy_assert
-  loop: '{{ _satellite_content_views }}'
+  loop: "{{ _satellite_content_views }}"
   loop_control:
-    loop_var: '__t_content_view'
+    loop_var: __t_content_view
     label: >-
       {{
         __t_content_view.name |
@@ -117,9 +117,9 @@
             )
           ]
       }}
-  loop: '{{ _satellite_content_views }}'
+  loop: "{{ _satellite_content_views }}"
   loop_control:
-    loop_var: '__t_content_view'
+    loop_var: __t_content_view
     label: >-
       {{
         __t_content_view.name |
@@ -130,12 +130,11 @@
 - name: >-
     convert_legacy | Overwrite old Content View/Composite Content view definition with the created temporary list
   ansible.builtin.set_fact:
-    _satellite_content_views: '{{ __t_satellite_content_views }}'
+    _satellite_content_views: "{{ __t_satellite_content_views }}"
     # empty the temporary list to save resources
     __t_satellite_content_views: []
 
-- name: 'convert_legacy | Debug: _satellite_content_views'
+- name: "convert_legacy | Debug: _satellite_content_views"
   ansible.builtin.debug:
-    var: '_satellite_content_views'
+    var: _satellite_content_views
     verbosity: 1
-...

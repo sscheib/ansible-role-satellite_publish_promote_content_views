@@ -1,9 +1,9 @@
 ---
-- name: 'test_timestamp | Check if timestamp can be converted to a date/time object'
+- name: test_timestamp | Check if timestamp can be converted to a date/time object
   ansible.builtin.assert:
     that:
-      - '__t_test_item is defined'
-      - '__t_attribute is defined'
+      - __t_test_item is defined
+      - __t_attribute is defined
       # adding __t_test_item to a list prior to selecting the attribute is done for merely
       # the reason that it is not possible (to my knowledge) to access sub keys of a dictionary
       # when the attribute to access is in a variable (__t_attribute) *and* it is a nested key.
@@ -26,9 +26,9 @@
         ansible.builtin.to_datetime(format=_sat_api_timestamp_format)
 
   ignore_errors: true
-  register: '__t_timestamp_check'
+  register: __t_timestamp_check
 
-- name: 'test_timestamp | Add failed item to failed items list'
+- name: test_timestamp | Add failed item to failed items list
   ansible.builtin.set_fact:
     __t_failed_items: >-
       {{
@@ -37,6 +37,5 @@
         ]
       }}
   when:
-    - '__t_timestamp_check.failed is defined'
-    - '__t_timestamp_check.failed'
-...
+    - __t_timestamp_check.failed is defined
+    - __t_timestamp_check.failed

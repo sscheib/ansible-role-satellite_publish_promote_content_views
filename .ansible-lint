@@ -1,39 +1,38 @@
 ---
 enable_list:
-  - 'args'
-  - 'empty-string-compare'
-  - 'no-log-password'
-  - 'no-same-owner'
-  - 'name[prefix]'
+  - args
+  - empty-string-compare
+  - no-log-password
+  - no-same-owner
+  - name[prefix]
 
 exclude_paths:
-  - '.git/'
-  - 'files/'
-  - 'README.md'
-  - 'LICENSE'
+  - .git/
+  - files/
+  - README.md
+  - LICENSE
 
 kinds:
-  - yaml: '.ansible-lint'
-  - yaml: '.github/workflows/*.{yml,yaml}'
-  - yaml: '.pre-commit-config.yaml'
-  - yaml: '.yamllint'
-  - yaml: 'collections/requirements.yml'
-  - meta: 'meta/main.{yml,yaml}'
-  - tasks: 'tasks/*.{yml,yaml}'
-  - vars: 'vars/*.{yml,yaml}'
-  - vars: 'defaults/*.{yml,yaml}'
+  - yaml: .ansible-lint
+  - yaml: .github/workflows/*.{yml,yaml}
+  - yaml: .pre-commit-config.yaml
+  - yaml: .yamllint
+  - yaml: collections/requirements.yml
+  - meta: meta/main.{yml,yaml}
+  - tasks: tasks/*.{yml,yaml}
+  - vars: vars/*.{yml,yaml}
+  - vars: defaults/*.{yml,yaml}
 
-loop_var_prefix: '^(__|{role}_)'
+loop_var_prefix: ^(__|{role}_)
 max_block_depth: 20
 offline: true
-profile: 'production'
+profile: production
 skip_action_validation: false
 skip_list: []
-task_name_prefix: '{stem} | '
+task_name_prefix: "{stem} | "
 use_default_rules: true
-var_naming_pattern: '^[a-z_][a-z0-9_]*$'
+var_naming_pattern: ^[a-z_][a-z0-9_]*$
 warn_list:
-  - 'experimental'
+  - experimental
 write_list:
-  - 'none'
-...
+  - none

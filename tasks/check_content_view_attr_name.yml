@@ -2,7 +2,6 @@
 - name: >-
     check_content_view_attr_name | Block: Handle Content Views/Composite Content Views without a name attribute
   block:
-
     - name: >-
         check_content_view_attr_name | Ensure all Content Views/Composite Content Views have the name attribute defined
       ansible.builtin.assert:
@@ -13,19 +12,17 @@
             selectattr('name', 'undefined') |
             length == 0
 
-        success_msg: 'All Content Views/Composite Content Views have a name attribute defined'
-        fail_msg: 'One or more Content View/Composite Content View have no name attribute defined'
-        quiet: '{{ _sat_quiet_assert }}'
-      register: '__t_has_content_view_no_name'
+        success_msg: All Content Views/Composite Content Views have a name attribute defined
+        fail_msg: One or more Content View/Composite Content View have no name attribute defined
+        quiet: "{{ _sat_quiet_assert }}"
+      register: __t_has_content_view_no_name
 
   always:
-
-    - name: 'check_content_view_attr_name | Block: Handle error case'
+    - name: "check_content_view_attr_name | Block: Handle error case"
       when:
-        - '__t_has_content_view_no_name.failed is defined'
-        - '__t_has_content_view_no_name.failed'
+        - __t_has_content_view_no_name.failed is defined
+        - __t_has_content_view_no_name.failed
       block:
-
         - name: >-
             check_content_view_attr_name | List all Content Views/Composite Content Views
             without attribute last_published
@@ -34,10 +31,9 @@
               __t_content_views.resources |
               selectattr('name', 'undefined')
 
-        - name: 'check_content_view_attr_name | Fail with meaningful error message'
+        - name: check_content_view_attr_name | Fail with meaningful error message
           ansible.builtin.fail:
             msg: >-
               Above Content Views/Composite Contents Views have not defined the 'name' attribute.
               This attribute should *always* be defined. Seeing this error indicates that the
               Satellite API response has changed and this role is no longer functional as it is.
-...

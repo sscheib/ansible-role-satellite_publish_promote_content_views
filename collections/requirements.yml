@@ -1,5 +1,4 @@
 ---
 collections:
-  - name: 'redhat.satellite'
-    version: '>=3.15'
-...
+  - name: redhat.satellite
+    version: ">=3.15"

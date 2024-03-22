@@ -3,21 +3,21 @@
     promote | Include tasks to check that all Content Views/Composite Content Views have
     the attribute latest_version defined
   ansible.builtin.include_tasks:
-    file: 'check_content_view_attr_latest_version.yml'
+    file: check_content_view_attr_latest_version.yml
 
 - name: >-
     promote | Include tasks to check that all Content Views/Composite Content Views have
     the attribute latest_version populated
   ansible.builtin.include_tasks:
-    file: 'check_content_view_attr_latest_version_populated.yml'
+    file: check_content_view_attr_latest_version_populated.yml
 
 # We need to do this as otherwise the previous __t_content_view_versions, which might at this point have been
 # used for Content View versions, would simply be extended for the Composite Content View versions
-- name: 'promote | Set fact: Ensure the list of versions of each Content View/Composite Content View used is reset'
+- name: "promote | Set fact: Ensure the list of versions of each Content View/Composite Content View used is reset"
   ansible.builtin.set_fact:
     __t_content_view_versions: []
 
-- name: 'promote | Promote the Content View/Composite Content View versions'
+- name: promote | Promote the Content View/Composite Content View versions
   redhat.satellite.content_view_version:
     username: >-
       {{
@@ -48,11 +48,11 @@
         else
         omit
       }}
-    organization: '{{ _satellite_organization }}'
-    content_view: '{{ __t_content_view.name }}'
-    state: 'present'
-    description: '{{ __t_description }}'
-    version: '{{ __t_content_view.latest_version }}'
+    organization: "{{ _satellite_organization }}"
+    content_view: "{{ __t_content_view.name }}"
+    state: present
+    description: "{{ __t_description }}"
+    version: "{{ __t_content_view.latest_version }}"
     # select the matching (Composite) Content view and check if the
     # respective attribute is defined: If yes, pass it to the module,
     # otherwise omit the parameter
@@ -165,36 +165,35 @@
       ) | length > 0
   # we track the change flag on the async task
   changed_when: false
-  async: '{{ _sat_async_max_time }}'
-  poll: '{{ _sat_async_poll_time }}'
-  register: '__t_async_content_view_promote'
-  loop: '{{ __t_filtered_content_views }}'
+  async: "{{ _sat_async_max_time }}"
+  poll: "{{ _sat_async_poll_time }}"
+  register: __t_async_content_view_promote
+  loop: "{{ __t_filtered_content_views }}"
   loop_control:
-    loop_var: '__t_content_view'
-    label: '{{ __t_content_view.name }}'
+    loop_var: __t_content_view
+    label: "{{ __t_content_view.name }}"
 
-- name: 'promote | Wait for the Content View/Composite Content View promote to finish'
+- name: promote | Wait for the Content View/Composite Content View promote to finish
   ansible.builtin.async_status:
-    jid: '{{ __t_promote_job.ansible_job_id }}'
-  until: '__t_async_result_content_view_promote.finished'
-  retries: '{{ _sat_async_retries }}'
-  delay: '{{ _sat_async_check_delay }}'
-  register: '__t_async_result_content_view_promote'
-  loop: '{{ __t_async_content_view_promote.results }}'
+    jid: "{{ __t_promote_job.ansible_job_id }}"
+  until: __t_async_result_content_view_promote.finished
+  retries: "{{ _sat_async_retries }}"
+  delay: "{{ _sat_async_check_delay }}"
+  register: __t_async_result_content_view_promote
+  loop: "{{ __t_async_content_view_promote.results }}"
   loop_control:
-    loop_var: '__t_promote_job'
-    label: '{{ __t_promote_job.__t_content_view.name }}'
+    loop_var: __t_promote_job
+    label: "{{ __t_promote_job.__t_content_view.name }}"
   when:
-    - '__t_promote_job.ansible_job_id is defined'
-    - "__t_promote_job.ansible_job_id != ''"
+    - __t_promote_job.ansible_job_id is defined
+    - __t_promote_job.ansible_job_id != ''
 
-- name: 'promote | Block: Handle collecting of Content Views for the summary'
+- name: "promote | Block: Handle collecting of Content Views for the summary"
   when:
-    - '_sat_show_summary is defined'
-    - '_sat_show_summary'
+    - _sat_show_summary is defined
+    - _sat_show_summary
   block:
-
-    - name: 'promote | Collect changed Content Views'
+    - name: promote | Collect changed Content Views
       ansible.builtin.set_fact:
         __t_changed_content_views: >-
           {{
@@ -210,7 +209,7 @@
         __t_is_composite is not defined
         or not __t_is_composite
 
-    - name: 'promote | Collect changed Composite Content Views'
+    - name: promote | Collect changed Composite Content Views
       ansible.builtin.set_fact:
         __t_changed_composite_content_views: >-
           {{
@@ -223,6 +222,5 @@
             ] | ansible.builtin.flatten
           }}
       when:
-        - '__t_is_composite is defined'
-        - '__t_is_composite'
-...
+        - __t_is_composite is defined
+        - __t_is_composite

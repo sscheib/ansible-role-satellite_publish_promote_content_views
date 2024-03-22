@@ -1,55 +1,54 @@
 ---
-- name: 'Ensure variables used before the actual assert statements are defined properly'
+- name: Ensure variables used before the actual assert statements are defined properly
   ansible.builtin.assert:
     that:
       # _sat_skip_legacy_conversion
-      - '_sat_skip_legacy_conversion is defined'
-      - '_sat_skip_legacy_conversion is boolean'
-      - '_sat_skip_legacy_conversion | bool | string == _sat_skip_legacy_conversion | string'
+      - _sat_skip_legacy_conversion is defined
+      - _sat_skip_legacy_conversion is boolean
+      - _sat_skip_legacy_conversion | bool | string == _sat_skip_legacy_conversion | string
 
       # _sat_skip_legacy_assert
-      - '_sat_skip_legacy_assert is defined'
-      - '_sat_skip_legacy_assert is boolean'
-      - '_sat_skip_legacy_assert | bool | string == _sat_skip_legacy_assert | string'
+      - _sat_skip_legacy_assert is defined
+      - _sat_skip_legacy_assert is boolean
+      - _sat_skip_legacy_assert | bool | string == _sat_skip_legacy_assert | string
 
       # _sat_skip_assert
-      - '_sat_skip_assert is defined'
-      - '_sat_skip_assert is boolean'
-      - '_sat_skip_assert | bool | string == _sat_skip_assert | string'
+      - _sat_skip_assert is defined
+      - _sat_skip_assert is boolean
+      - _sat_skip_assert | bool | string == _sat_skip_assert | string
 
       # _satellite_content_views
-      - '_satellite_content_views is not string'
-      - '_satellite_content_views is not mapping'
-      - '_satellite_content_views is sequence'
-      - '_satellite_content_views is iterable'
+      - _satellite_content_views is not string
+      - _satellite_content_views is not mapping
+      - _satellite_content_views is sequence
+      - _satellite_content_views is iterable
 
-    success_msg: 'Basic variables are defined properly'
-    fail_msg: 'Basic variables failed to validate'
+    success_msg: Basic variables are defined properly
+    fail_msg: Basic variables failed to validate
     # use _sat_quiet_assert, when possible, otherwise don't quiet it
     # _sat_quiet_assert will be checked later
-    quiet: '{{ _sat_quiet_assert | default(false) }}'
+    quiet: "{{ _sat_quiet_assert | default(false) }}"
 
-- name: 'Block: Handle detecting a legacy format'
+- name: "Block: Handle detecting a legacy format"
   when: >-
     _sat_skip_legacy_conversion is not defined
     or not _sat_skip_legacy_conversion
   tags:
-    - 'all'
-    - 'convert'
+    - all
+    - convert
   block:
-
-    - name: 'Ensure _sat_convert_yaml_file is defined properly when the tag convert is used'
+    - name: Ensure _sat_convert_yaml_file is defined properly when the tag convert is used
       ansible.builtin.assert:
         that:
-          - '_sat_convert_yaml_file is defined'
-          - '_sat_convert_yaml_file is string'
-          - "_sat_convert_yaml_file != ''"
-          - '_sat_convert_yaml_file != None'
+          - _sat_convert_yaml_file is defined
+          - _sat_convert_yaml_file is string
+          - _sat_convert_yaml_file != ''
+          - _sat_convert_yaml_file != None
       when: >-
         ansible_run_tags is defined
         and 'convert' in ansible_run_tags
 
-    - name: 'Check if any items of _satellite_content_views are in the legacy format'
+    - name: Check if any items of _satellite_content_views are in the legacy format
       ansible.builtin.set_fact:
         __t_is_legacy: true
       when: >-
@@ -57,9 +56,9 @@
         and __t_content_view is iterable
         and __t_content_view is sequence
         and __t_content_view is not mapping
-      loop: '{{ _satellite_content_views }}'
+      loop: "{{ _satellite_content_views }}"
       loop_control:
-        loop_var: '__t_content_view'
+        loop_var: __t_content_view
         label: >-
           {{
             __t_content_view.name |
@@ -67,13 +66,13 @@
             default(__t_content_view)
           }}
 
-    - name: 'Include tasks to convert legacy Content View/Composite Content view definition'
+    - name: Include tasks to convert legacy Content View/Composite Content view definition
       ansible.builtin.include_tasks:
-        file: 'convert_legacy.yml'
+        file: convert_legacy.yml
         apply:
           tags:
-            - 'all'
-            - 'convert'
+            - all
+            - convert
 
       # we check whether any item has 'content_view' (instead of 'name') set
       # or whether a 'legacy' format was detected on any of the items
@@ -85,35 +84,34 @@
           and __t_is_legacy
         )
 
-    - name: 'Block: Handle tag convert'
+    - name: "Block: Handle tag convert"
       when: >-
         ansible_run_tags is defined
         and 'convert' in ansible_run_tags
       block:
-
-        - name: 'Include tasks to dump the YAML'
+        - name: Include tasks to dump the YAML
           ansible.builtin.include_tasks:
-            file: 'dump_yaml.yml'
+            file: dump_yaml.yml
             apply:
               tags:
-                - 'convert'
+                - convert
 
-        - name: 'End the play when only converting of legacy YAML syntax was asked for'
-          ansible.builtin.meta: 'end_play'
+        - name: End the play when only converting of legacy YAML syntax was asked for
+          ansible.builtin.meta: end_play
 
-- name: 'Include tasks to ensure variables are defined properly'
+- name: Include tasks to ensure variables are defined properly
   ansible.builtin.include_tasks:
-    file: 'assert.yml'
+    file: assert.yml
   when: >-
     _sat_skip_assert is not defined
     or not _sat_skip_assert
 
-- name: 'Gather Ansible date time facts'
+- name: Gather Ansible date time facts
   ansible.builtin.setup:
     gather_subset:
-      - '!all'
-      - '!min'
-      - 'date_time'
+      - "!all"
+      - "!min"
+      - date_time
 
   # the facts are only needed when no description for the Content View
   # version or the Composite Content View version is set
@@ -123,39 +121,38 @@
     or _sat_composite_content_view_version_description is not defined
     or _sat_composite_content_view_version_description == None
 
-- name: 'Include tasks to check if all defined Content Views/Composite Content Views are known to Satellite'
+- name: Include tasks to check if all defined Content Views/Composite Content Views are known to Satellite
   ansible.builtin.include_tasks:
-    file: 'check_content_view_no_unknown.yml'
+    file: check_content_view_no_unknown.yml
   when:
-    - '_sat_check_content_views_known is defined'
-    - '_sat_check_content_views_known'
+    - _sat_check_content_views_known is defined
+    - _sat_check_content_views_known
 
-- name: 'Include tasks to prepare for publishing and/or promoting Content Views'
+- name: Include tasks to prepare for publishing and/or promoting Content Views
   ansible.builtin.include_tasks:
-    file: 'prepare.yml'
+    file: prepare.yml
   vars:
     __t_is_composite: false
-    __t_description: '{{ _sat_content_view_version_description | default(None) }}'
-    __t_promote_only: '{{ _sat_only_promote_content_views | default(None) }}'
+    __t_description: "{{ _sat_content_view_version_description | default(None) }}"
+    __t_promote_only: "{{ _sat_only_promote_content_views | default(None) }}"
   when:
-    - '_sat_content_view_kinds is defined'
-    - "_sat_content_view_kinds in ['content_views', 'both']"
+    - _sat_content_view_kinds is defined
+    - _sat_content_view_kinds in ['content_views', 'both']
 
-- name: 'Include tasks to prepare for publishing and/or promoting Composite Content Views'
+- name: Include tasks to prepare for publishing and/or promoting Composite Content Views
   ansible.builtin.include_tasks:
-    file: 'prepare.yml'
+    file: prepare.yml
   vars:
     __t_is_composite: true
-    __t_description: '{{ _sat_composite_content_view_version_description | default(None) }}'
-    __t_promote_only: '{{ _sat_only_promote_composite_content_views | default(None) }}'
+    __t_description: "{{ _sat_composite_content_view_version_description | default(None) }}"
+    __t_promote_only: "{{ _sat_only_promote_composite_content_views | default(None) }}"
   when:
-    - '_sat_content_view_kinds is defined'
-    - "_sat_content_view_kinds in ['composite_content_views', 'both']"
+    - _sat_content_view_kinds is defined
+    - _sat_content_view_kinds in ['composite_content_views', 'both']
 
-- name: 'Include tasks to show a summary'
+- name: Include tasks to show a summary
   ansible.builtin.include_tasks:
-    file: 'summary.yml'
+    file: summary.yml
   when:
-    - '_sat_show_summary is defined'
-    - '_sat_show_summary'
-...
+    - _sat_show_summary is defined
+    - _sat_show_summary
