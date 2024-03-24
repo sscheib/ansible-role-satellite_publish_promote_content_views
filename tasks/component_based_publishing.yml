@@ -32,17 +32,23 @@
   ansible.builtin.include_tasks:
     file: 'check_content_view_attr_components_populated.yml'
 
-- name: >-
-    component_based_publishing | Include tasks to ensure that all Composite Content Views
-    define the needs_publish attribute
-  ansible.builtin.include_tasks:
-    file: 'check_content_view_attr_needs_publish.yml'
+- name: 'component_based_publishing | Block: Handle needs_publish attribute'
+  when: >-
+    _sat_ignore_missing_needs_publish_attribute is not defined
+    or not _sat_ignore_missing_needs_publish_attribute
+  block:
 
-- name: >-
-    component_based_publishing | Include tasks to ensure that all Composite Content Views
-    populate the needs_publish attribute
-  ansible.builtin.include_tasks:
-    file: 'check_content_view_attr_needs_publish_populated.yml'
+    - name: >-
+        component_based_publishing | Include tasks to ensure that all Composite Content Views
+        define the needs_publish attribute
+      ansible.builtin.include_tasks:
+        file: 'check_content_view_attr_needs_publish.yml'
+
+    - name: >-
+        component_based_publishing | Include tasks to ensure that all Composite Content Views
+        populate the needs_publish attribute
+      ansible.builtin.include_tasks:
+        file: 'check_content_view_attr_needs_publish_populated.yml'
 
 - name: 'component_based_publishing | Collect Composite Content Views that require publishing'
   ansible.builtin.set_fact:
@@ -53,7 +59,30 @@
         selectattr('needs_publish', '==', true)
       }}
 
-- name: 'component_based_publishing | Debug: __t_composite_content_view_publish_requiredi (names only)'
+- name: 'component_based_publishing | Block: Handle ignoring of the needs_publish attribute'
+  when:
+    - '_sat_ignore_missing_needs_publish_attribute is defined'
+    - '_sat_ignore_missing_needs_publish_attribute'
+  block:
+
+    - name: 'component_based_publishing | Set variable with a null value to compare to in the next task'
+      ansible.builtin.set_fact:
+        # this needs to be unquoted. otherwise it is interpreted as string and therefore it will not
+        # match when collecting null-value needs_publish Composite Content Views
+        __t_null: null
+
+    - name: >-
+        component_based_publishing | Add all Composite Content Views that have not defined the needs_publish attribute
+      ansible.builtin.set_fact:
+        __t_composite_content_view_publish_required: >-
+          {{
+            __t_composite_content_view_publish_required |
+            default([]) +
+            __t_excluded_content_views |
+            selectattr('needs_publish', '==', __t_null)
+          }}
+
+- name: 'component_based_publishing | Debug: __t_composite_content_view_publish_required (names only)'
   ansible.builtin.debug:
     var: >-
         __t_composite_content_view_publish_required | map(attribute='name')
