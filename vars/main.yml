@@ -51,14 +51,14 @@ _sat_quiet_assert: '{{ sat_quiet_assert | default(_def_sat_quiet_assert) }}'
 
 # description of the Content View version. This is not the Description of the Content View itself.
 # if unset, it will have the default of 'Patch day YYYY-MM-DD'
-_sat_content_view_version_description: '{{ sat_content_view_version_description | default(None) }}'
+_sat_content_view_version_description: '{{ sat_content_view_version_description | default(undef()) }}'
 
 # description of the Composite Content View version. This is not the Description of the
 # Composite Content View itself.
 # if unset, it will have the default of 'Patch day YYYY-MM-DD'
 _sat_composite_content_view_version_description: >-
   {{
-    sat_composite_content_view_version_description | default(None)
+    sat_composite_content_view_version_description | default(undef())
   }}
 
 # whether to only promote Content Views - no publish will happen.
