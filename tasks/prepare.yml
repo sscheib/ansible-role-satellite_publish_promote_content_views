@@ -19,9 +19,9 @@
     # Content View/Composite Content View Version description
     __t_description: >-
       {{
-        __t_description
-        if __t_description is defined
-        and __t_description != None
+        __t_given_description
+        if __t_given_description is defined
+        and __t_given_description != None
         else
         'Patch day ' ~ ansible_date_time.date
       }}

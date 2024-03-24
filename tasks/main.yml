@@ -135,7 +135,7 @@
     file: 'prepare.yml'
   vars:
     __t_is_composite: false
-    __t_description: '{{ _sat_content_view_version_description | default(None) }}'
+    __t_given_description: '{{ _sat_content_view_version_description | default(undef()) }}'
     __t_promote_only: '{{ _sat_only_promote_content_views | default(None) }}'
   when:
     - '_sat_content_view_kinds is defined'
@@ -146,7 +146,7 @@
     file: 'prepare.yml'
   vars:
     __t_is_composite: true
-    __t_description: '{{ _sat_composite_content_view_version_description | default(None) }}'
+    __t_given_description: '{{ _sat_composite_content_view_version_description | default(undef()) }}'
     __t_promote_only: '{{ _sat_only_promote_composite_content_views | default(None) }}'
   when:
     - '_sat_content_view_kinds is defined'
