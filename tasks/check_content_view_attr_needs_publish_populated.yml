@@ -51,4 +51,6 @@
             msg: >-
               Above Content Views/Composite Contents Views have not correctly populated the 'needs_publish' attribute.
               It was expected to be of boolean type, so this role cannot safely continue.
+              You can work around an unpopulated 'needs_publish' attribute setting
+              'sat_ignore_missing_needs_publish_attribute' to true.
 ...

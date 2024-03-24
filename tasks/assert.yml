@@ -464,6 +464,7 @@
     - '_sat_synchronize_repositories'
     - '_sat_publish_based_on_component'
     - '_sat_show_summary'
+    - '_sat_ignore_missing_needs_publish_attribute'
   loop_control:
     loop_var: '__t_var'
 

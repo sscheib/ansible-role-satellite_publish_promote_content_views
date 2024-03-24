@@ -220,13 +220,14 @@ Role Variables
 | `sat_excluded_composite_content_views`                       | unset                  | false    | Exclude Composite Content Views from any activity                                  |
 | `sat_excluded_content_views`                                 | unset                  | false    | Exclude Content Views from any activity                                            |
 | `sat_excluded_repositories`                                  | unset                  | false    | Exclude Repositories from any activity/checks                                      |
-| `sat_wait_for_repository_synchronization`                    | `false`                | false    | Whether to wait for Repositories to finish synchronizing                           | 
+| `sat_ignore_missing_needs_publish_attribute`                 | `false`                | false    | Ignore a missing `needs_publish` attribute [^needs_publish]                        |
 | `sat_publish_based_on_repository`                            | unset                  | false    | Whether to publish Content Views based on Repository synchronization date          |
 | `sat_publish_based_on_component`                             | unset                  | false    | Whether to publish Composite Content Views based on their included Components      |
 | `sat_show_summary`                                           | `true`                 | false    | Whether to show a summary at the end of the role, which lists all changed objects  |
 | `sat_skip_legacy_conversion`                                 | `false`                | false    | Whether to skip the on-the-fly conversion of 'legacy' CV/CCV definitions           |
 | `sat_skip_legacy_assert`                                     | `false`                | false    | Disable check if a legacy format can be converted                                  |
 | `sat_skip_assert`                                            | `false`                | false    | Whether to skip the assert statements which check all variables (`assert.yml`)     |
+| `sat_wait_for_repository_synchronization`                    | `false`                | false    | Whether to wait for Repositories to finish synchronizing                           | 
 | `sat_synchronize_repositories`                               | `false`                | false    | Whether to synchronize Repositories prior to publishing                            |
 | `sat_convert_yaml_file`                                      | unset                  | false    | File in which the converted YAML definition will be written to (if requested)      |
 | `sat_convert_yaml_indent`                                    | `2`                    | false    | What indentation (number of spaces) the converted YAML should have                 |
@@ -241,6 +242,12 @@ Role Variables
 
 [^content_view_kinds]: This variable can either have the value `content_views` to process only Content Views, `composite_content_views` to process only Composite Content Views or `both`
                        to process either of them. This way you can limit the activities to either Content Views or Composite Content Views, should you need to do so.
+
+[^needs_publish]: When no action has been performed for a longer timeframe (I don't know the exact timeframe), the `needs_publish` attribute is empty (`null`) for Composite Content Views.
+                  By default, this role will display an error that the `needs_publish` attribute is not defined. When enabling the variable `sat_ignore_missing_needs_publish_attribute`
+                  Composite Content Views that do not have the `needs_publish` attribute, or have it set to `null` will be added to those Composite Content Views that need publishing. This
+                  effectively disables 'Component Based Publishing' for these Composite Content Views. All other Composite Content Views with an existing and populated `needs_publishing`
+                  attribute are not affected by this and will be evaluated as usual.
 
 ## Notes
 

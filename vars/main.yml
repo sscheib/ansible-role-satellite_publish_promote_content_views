@@ -195,6 +195,17 @@ _sat_check_content_views_known: '{{ sat_check_content_views_known | default(_def
 # Repositories (if any)
 _sat_show_summary: '{{ sat_show_summary | default(_def_sat_show_summary) }}'
 
+# whether to ignore a missing or unpopulated 'needs_publish' attribute of all Composite Content Views
+# this attribute is usually unpopulated when no action has been performed on the Composite Content View
+# for a longer time
+# when this variable is set to true, it will effectively ignore whether a publish is required and will
+# publish a new Composite Content View version. This only affects those Composite Content Views which
+# have no 'needs_publish' attribute or when it is 'null'
+_sat_ignore_missing_needs_publish_attribute: >-
+  {{
+    sat_ignore_missing_needs_publish_attribute | default(_def_sat_ignore_missing_needs_publish_attribute)
+  }}
+
 #
 # below variables are only used when this role is run with the tag 'convert'
 #
