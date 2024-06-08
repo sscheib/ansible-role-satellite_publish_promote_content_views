@@ -108,6 +108,10 @@
     _sat_skip_assert is not defined
     or not _sat_skip_assert
 
+- name: 'Include tasks to check Satellite services'
+  ansible.builtin.include_tasks:
+    file: 'check_services.yml'
+
 - name: 'Gather Ansible date time facts'
   ansible.builtin.setup:
     gather_subset:

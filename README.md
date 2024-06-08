@@ -9,10 +9,14 @@ This role is absurdly complex. I tested as best as I could, but I certainly cann
 actions *will* change these objects in your Satellite, I'd urge you to test prior to using this in production right away. This role is provided "as is" and I do not take responsibility for any potential
 devastating consequences it might have. Please keep that in mind and test with a snapshot in place for your Satellite or on a lab system. Thanks a lot :slightly_smiling_face:
 
-
-
 This role publishes and optionally promotes both Content View and Composite Content view versions. It makes use of the Red Hat certified
 collection [`redhat.satellite`](https://console.redhat.com/ansible/automation-hub/repo/published/redhat/satellite/docs/).
+
+It is been tested on following Satellite versions:
+
+- 6.15
+- 6.14
+- 6.13
 
 To use the certified collection `redhat.satellite` you need to be a Red Hat subscriber. If you don't own any subscriptions, you can make use of
 [Red Hat's Developer Subscription](https://developers.redhat.com/articles/faqs-no-cost-red-hat-enterprise-linux) which is provided at no cost by Red Hat.
