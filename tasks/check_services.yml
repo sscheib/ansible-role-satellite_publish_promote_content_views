@@ -1,0 +1,102 @@
+---
+- name: 'check_services | Retrieve Service status of the Satellite'
+  redhat.satellite.status_info:
+    username: >-
+      {{
+        _satellite_username
+        if _satellite_username is defined and _satellite_username != ''
+        else
+        omit
+      }}
+    password: >-
+      {{
+        _satellite_password
+        if _satellite_password is defined and _satellite_password != ''
+        else
+        omit
+      }}
+    server_url: >-
+      {{
+        _satellite_server_url
+        if _satellite_server_url is defined and _satellite_server_url != ''
+        else
+        omit
+      }}
+    validate_certs: >-
+      {{
+        _satellite_validate_certs
+        if _satellite_validate_certs is defined and _satellite_validate_certs | string != ''
+        and _satellite_validate_certs != None
+        else
+        omit
+      }}
+  register: '__t_status'
+
+- name: 'check_services | Ensure Satellite status response is as expected'
+  ansible.builtin.assert:
+    that:
+      # status is defined
+      # - a string
+      # - not empty
+      # - not None
+      - '__t_status.ping.results.katello.status is defined'
+      - '__t_status.ping.results.katello.status is string'
+      - "__t_status.ping.results.katello.status != ''"
+      - "__t_status.ping.results.katello.status != 'None'"
+
+      # services
+      # - is defined
+      # - iterable
+      # - a sequence
+      # - a mapping
+      - '__t_status.ping.results.katello.services is defined'
+      - '__t_status.ping.results.katello.services is iterable'
+      - '__t_status.ping.results.katello.services is sequence'
+      - '__t_status.ping.results.katello.services is mapping'
+    success_msg: 'Satellite status response is as expected'
+    fail_msg: 'The data returned by the Satellite API are not as expected and this role cannot safely continue'
+
+- name: 'check_services | Block: Handle failed services'
+  block:
+
+    - name: 'check_services | Ensure Satellite services are up and running'
+      ansible.builtin.assert:
+        that:
+          # no service reported a failure
+          - >-
+            __t_status.ping.results.katello.services |
+            ansible.builtin.dict2items |
+            rejectattr('value.status', '==', 'ok') |
+            length == 0
+        success_msg: 'Satellite services are up and running'
+        fail_msg: 'One or more Satellite services reported failures'
+
+  rescue:
+
+    - name: 'check_services | List failed services'
+      ansible.builtin.debug:
+        msg: >-
+          {{
+            'Service ' ~
+            __t_service.key ~
+            ' reported status ' ~
+            __t_service.value.status ~
+            ' with message: ' ~
+            __t_service.value.message
+          }}
+      loop: >-
+        {{
+          __t_status.ping.results.katello.services |
+          ansible.builtin.dict2items |
+          selectattr('value.status', '!=', 'ok')
+        }}
+      loop_control:
+        loop_var: '__t_service'
+        label: '{{ __t_service.key }}'
+
+    - name: 'check_services | Fail as Satellite services reported failures'
+      ansible.builtin.fail:
+        msg: >-
+          One or more Satellite services reported failures and this role cannot safely continue. The failed
+          services are listed in the previous task. Please address these failures and re-run the role.
+...
