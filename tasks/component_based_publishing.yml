@@ -78,8 +78,15 @@
           {{
             __t_composite_content_view_publish_required |
             default([]) +
-            __t_excluded_content_views |
-            selectattr('needs_publish', '==', __t_null)
+            (
+              __t_excluded_content_views |
+              rejectattr('needs_publish', 'undefined') |
+              selectattr('needs_publish', '==', __t_null)
+              +
+              __t_excluded_content_views |
+              selectattr('needs_publish', 'undefined')
+            ) |
+            ansible.builtin.flatten
           }}
 
 - name: 'component_based_publishing | Debug: __t_composite_content_view_publish_required (names only)'
