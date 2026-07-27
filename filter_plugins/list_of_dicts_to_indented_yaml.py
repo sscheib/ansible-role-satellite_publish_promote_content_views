@@ -29,7 +29,7 @@ def list_of_dicts_to_indented_yaml(obj, indent=2, top_key=None, **kwargs):
     '''Convert a list of dictionaries to a YAML formatted string'''
 
     if not isinstance(obj, list):
-        raise AnsibleFilterError(f'to_very_nice_yaml: Provided data is not a list, it is {type(i)}')
+        raise AnsibleFilterError(f'to_very_nice_yaml: Provided data is not a list, it is {type(obj)}')
 
     data = list()
     for i in obj:
